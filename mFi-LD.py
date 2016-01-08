@@ -147,13 +147,9 @@ class mSwitch(mPower,mFiWebSocketClient):
             pass
 
 def callback(data):
-    #print data
-    #print mFI.status
     print mFI.dimmer_level
 
 if __name__ == '__main__':
     mFI = mSwitch("10.10.55.213","admin","ubnt",callback)
     connectWS(mFI)
-    reactor.callLater(5,mine)
-
     reactor.run()
