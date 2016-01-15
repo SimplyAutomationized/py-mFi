@@ -1,4 +1,5 @@
 import json
+from mPower import *
 import threading
 from autobahn.twisted.websocket import WebSocketClientProtocol, WebSocketClientFactory,connectWS
 from time import sleep
@@ -44,57 +45,6 @@ class mFiWebSocketClient(WebSocketClientFactory, ReconnectingClientFactory):
 
     def recv_data(self, payload, isBinary):
         self.status = json.loads(payload)['sensors'][0]
-        #print payload
-
-
-
-class mPower(object):
-
-    def __init__(self):
-        self.voltage = -1
-        self.powerfactor = -1
-        self.energy = -1
-        self.current = -1
-        self.power = -1
-    @property
-    def _power(self):
-        return self.power
-
-    @property
-    def _voltage(self):
-        return self.voltage
-
-    @property
-    def _powerfactor(self):
-        return self.voltage
-
-    @property
-    def _energy(self):
-        return self.energy
-
-    @property
-    def _current(self):
-        return self.current
-
-    @_power.setter
-    def _power(self,value):
-        self.power = value
-
-    @_current.setter
-    def _current(self,value):
-        self.current = value
-
-    @_voltage.setter
-    def _voltage(self, value):
-        self.voltage = value
-
-    @_energy.setter
-    def _energy(self,value):
-        self.energy = value
-
-    @_powerfactor.setter
-    def _powerfactor(self,value):
-        self.powerfactor = value
 
 
 class mSwitch(mPower, mFiWebSocketClient):
@@ -154,8 +104,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('address', help="address", default="localhost", nargs="?")
     parser.add_argument('port', help="port", default=7682, nargs="?")
+    parser.add_argument('username',help='username',default='ubnt',nargs="?")
+    parser.add_argument('pwd',help='password',default='ubnt',nargs="?")
     args = parser.parse_args()
 
-    mFI = mSwitch(args.address,"ubnt","ubnt", callback, port=args.port)
+    mFI = mSwitch(args.address,args.username,args.pwd, callback, port=args.port)
     connectWS(mFI)
     reactor.run()
