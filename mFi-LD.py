@@ -49,13 +49,13 @@ class mSwitch(mPower, mFiWebSocketClient):
     _dimmer_level = 0
     _output = 0
 
-    def __init__(self, ip, username, password, datachangeCallback=None, port=7682):
+    def __init__(self, ip, username, password, port=7682):
         mPower.__init__(self)
         mFiWebSocketClient.__init__(self, "wss://{}:{}/?username={}&password={}".format(ip, port, username, password),
                                     protocols=['mfi-protocol'])
-        self.output
-        self.dimmer_level
-        self.callback = datachangeCallback
+        # self.output
+        # self.dimmer_level
+        self.callback = None
 
     @property
     def dimmer_level(self):
@@ -79,11 +79,11 @@ class mSwitch(mPower, mFiWebSocketClient):
     def output(self, value):
         self._output = value
         data = {"sensors": [{"output": value, "port": 1}]}
-        self.send_cmd(json.dumps(data))
+        self.send_cmd(data)
 
     def recv_data(self, payload, isBinary):
         if not isBinary:
-            print payload
+            #print payload
             self.status = json.loads(payload)['sensors'][0]
             for key in self.status.keys():
                 setattr(self, '_' + key, self.status[key])
@@ -94,7 +94,9 @@ class mSwitch(mPower, mFiWebSocketClient):
 
 
 def callback(data):
-    print mFI.dimmer_level
+    mFI.output = not mFI.output
+
+
 
 
 if __name__ == '__main__':
@@ -107,6 +109,7 @@ if __name__ == '__main__':
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     args = parser.parse_args()
 
-    mFI = mSwitch(args.address, args.username, args.pwd, callback, port=args.port)
+    mFI = mSwitch(args.address, args.username, args.pwd, port=args.port)
+    mFI.callback = callback
     connectWS(mFI)
     reactor.run()
