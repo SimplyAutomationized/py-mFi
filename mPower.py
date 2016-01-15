@@ -1,13 +1,11 @@
-
-
 class mPower(object):
-
     def __init__(self):
         self._voltage = -1
         self._powerfactor = -1
         self._energy = -1
         self._current = -1
         self._power = -1
+
     @property
     def power(self):
         return self._power
@@ -29,11 +27,11 @@ class mPower(object):
         return self._current
 
     @power.setter
-    def power(self,value):
+    def power(self, value):
         self._power = value
 
     @current.setter
-    def current(self,value):
+    def current(self, value):
         self._current = value
 
     @voltage.setter
@@ -41,9 +39,9 @@ class mPower(object):
         self._voltage = value
 
     @energy.setter
-    def energy(self,value):
+    def energy(self, value):
         self._energy = value
 
     @powerfactor.setter
-    def powerfactor(self,value):
+    def powerfactor(self, value):
         self._powerfactor = value
