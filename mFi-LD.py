@@ -97,14 +97,14 @@ class mPower(object):
         self.powerfactor = value
 
 
-class mSwitch(mPower,mFiWebSocketClient):
+class mSwitch(mPower, mFiWebSocketClient):
     _dimmer_level = 0
     _output = 0
 
-    def __init__(self,ip,username,password,datachangeCallback=None):
+    def __init__(self, ip, username, password, datachangeCallback=None, port=7682):
         mPower.__init__(self)
         #7682
-        mFiWebSocketClient.__init__(self,"wss://{0}:9000/?username={1}&password={2}".format(ip,username,password),
+        mFiWebSocketClient.__init__(self, "wss://{}:{}/?username={}&password={}".format(ip, port, username, password),
                                     protocols=['mfi-protocol'])
         self.output
         self.dimmer_level
@@ -130,7 +130,7 @@ class mSwitch(mPower,mFiWebSocketClient):
         return self._output
 
     @output.setter
-    def output(self,value):
+    def output(self, value):
         self._output = value
         data = {"sensors": [{"output":value,"port": 1}]}
         self.send_cmd(json.dumps(data))
@@ -150,6 +150,12 @@ def callback(data):
     print mFI.dimmer_level
 
 if __name__ == '__main__':
-    mFI = mSwitch("10.10.55.213","admin","ubnt",callback)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('address', help="address", default="localhost", nargs="?")
+    parser.add_argument('port', help="port", default=7682, nargs="?")
+    args = parser.parse_args()
+
+    mFI = mSwitch(args.address,"ubnt","ubnt", callback, port=args.port)
     connectWS(mFI)
     reactor.run()
