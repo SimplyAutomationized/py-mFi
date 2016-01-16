@@ -1,37 +1,37 @@
 import json
-from mPower import *
 import threading
-from autobahn.twisted.websocket import WebSocketClientProtocol, WebSocketClientFactory, connectWS
 from time import sleep
-from twisted.internet import reactor
-
-from twisted.internet.protocol import ReconnectingClientFactory
 
 from autobahn.twisted.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
+from autobahn.twisted.websocket import connectWS
+from twisted.internet import reactor
+from twisted.internet.protocol import ReconnectingClientFactory
 
-mFI = None
+from mPower import *
 
 
-class mFiWebSocketClient(WebSocketClientFactory, ReconnectingClientFactory):
-    class mFiWebSocketClientProtocol(WebSocketClientProtocol):
-        def onOpen(self):
-            self.sendMessage('{"time":10}')
-            self.factory.send_cmd = self.send_cmd
+class UBNTWebSocketClient(threading.Thread, ReconnectingClientFactory):
+    def __init__(self, ip, username, password, port, useReactor=True):
+        threading.Thread.__init__(self)
+        self.__webSocket = WebSocketClientFactory(url="wss://{}:{}/?username={}&password={}".
+                                                  format(ip, port, username, password), protocols=['mfi-protocol'])
+        self.__webSocket.protocol = WebSocketClientProtocol
+        self.__webSocket.protocol.onMessage = self.recv_data
+        self.callback = None
+        self.useReactor = useReactor
+        self.start()
 
-        def onMessage(self, payload, isBinary):
-            self.factory.recv_data(payload, isBinary)
-
-        def send_cmd(self, data):
-            print data
-            # {"sensors":[{"output":1,"port":1}]}
-            self.sendMessage(json.dumps(data))
-
-    protocol = mFiWebSocketClientProtocol
-    status = {}
-
-    def send_cmd(self, payload, isBinary=False):
+    def recv_data(self):
         pass
+
+    def run(self):
+        connectWS(self.__webSocket)
+        if self.useReactor:
+            reactor.run(installSignalHandlers=0)
+
+    def send_cmd(self, data):
+        self.__webSocket.protocol.sendMessage(json.dumps(data))
 
     def clientConnectionFailed(self, connector, reason):
         print("Client connection failed .. retrying ..")
@@ -41,21 +41,19 @@ class mFiWebSocketClient(WebSocketClientFactory, ReconnectingClientFactory):
         print("Client connection lost .. retrying ..")
         self.retry(connector)
 
-    def recv_data(self, payload, isBinary):
-        self.status = json.loads(payload)['sensors'][0]
+    def close(self):
+        reactor.stop()
+        self.join()
 
 
-class mSwitch(mPower, mFiWebSocketClient):
+class mSwitch(mPower, UBNTWebSocketClient):
     _dimmer_level = 0
     _output = 0
 
-    def __init__(self, ip, username, password, port=7682):
+    def __init__(self, ip, username, password, port=7682, useReactor=True):
         mPower.__init__(self)
-        mFiWebSocketClient.__init__(self, "wss://{}:{}/?username={}&password={}".format(ip, port, username, password),
-                                    protocols=['mfi-protocol'])
-        # self.output
-        # self.dimmer_level
-        self.callback = None
+        UBNTWebSocketClient.__init__(self, ip, username, password, port, useReactor)
+        self.status = {}
 
     @property
     def dimmer_level(self):
@@ -83,20 +81,24 @@ class mSwitch(mPower, mFiWebSocketClient):
 
     def recv_data(self, payload, isBinary):
         if not isBinary:
-            #print payload
+            # print payload
             self.status = json.loads(payload)['sensors'][0]
             for key in self.status.keys():
                 setattr(self, '_' + key, self.status[key])
             if self.callback is not None:
-                self.callback(self.status)
+                self.callback(self, self.status)
         else:
             pass
 
 
-def callback(data):
-    mFI.output = not mFI.output
+def callback(mFI, data):
+    print mFI.status
 
 
+def mysend():
+    val = input()
+    mFI.send_cmd(val)
+    reactor.callLater(10, mysend)
 
 
 if __name__ == '__main__':
@@ -111,5 +113,6 @@ if __name__ == '__main__':
 
     mFI = mSwitch(args.address, args.username, args.pwd, port=args.port)
     mFI.callback = callback
-    connectWS(mFI)
-    reactor.run()
+
+    sleep(60)
+    mFI.close()
