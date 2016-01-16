@@ -10,7 +10,6 @@ from twisted.internet.protocol import ReconnectingClientFactory
 
 from mPower import *
 
-
 class UBNTWebSocketClient(threading.Thread, ReconnectingClientFactory):
     def __init__(self, ip, username, password, port, useReactor=True):
         threading.Thread.__init__(self)
@@ -91,16 +90,10 @@ class mSwitch(mPower, UBNTWebSocketClient):
             pass
 
 
-def callback(mFI, data):
-    print mFI.status
-
-
 def mysend():
     val = input()
     mFI.send_cmd(val)
     reactor.callLater(10, mysend)
-
-
 if __name__ == '__main__':
     import argparse
 
@@ -112,7 +105,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     mFI = mSwitch(args.address, args.username, args.pwd, port=args.port)
-    mFI.callback = callback
 
+    def callback(data):
+        mFI.output = not mFI.output 
+   
+    mFI.callback = callback
+    
     sleep(60)
     mFI.close()
