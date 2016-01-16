@@ -1,66 +1,86 @@
 import json
-import threading
+from threading import Thread
 from time import sleep
+import ssl
 
-from autobahn.twisted.websocket import WebSocketClientProtocol, \
+from autobahn.asyncio.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
-from autobahn.twisted.websocket import connectWS
-from twisted.internet import reactor
-from twisted.internet.protocol import ReconnectingClientFactory
 
 from mPower import *
 
-class UBNTWebSocketClient(threading.Thread, ReconnectingClientFactory):
-    def __init__(self, ip, username, password, port, useReactor=True):
-        threading.Thread.__init__(self)
+import trollius as asyncio
+
+class UbntWebSocketProtocol(WebSocketClientProtocol):
+
+    def onOpen(self):
+        self.factory.client.sendMessage = self.sendMessage
+
+class UBNTWebSocketClient():
+    def __init__(self, ip, port, username, password, loop=None):
         self.__webSocket = WebSocketClientFactory(url="wss://{}:{}/?username={}&password={}".
                                                   format(ip, port, username, password), protocols=['mfi-protocol'])
-        self.__webSocket.protocol = WebSocketClientProtocol
-        self.__webSocket.protocol.onMessage = self.recv_data
+        self.addy = ip
+        self.port = port
         self.callback = None
-        self.useReactor = useReactor
-        self.start()
+
+        self.__webSocket.protocol = UbntWebSocketProtocol
+        self.__webSocket.protocol.onMessage = self.recv_data
+        self.__webSocket.protocol.onClose = self.clientConnectionFailed       
+        
+        self.__webSocket.client = self
+
+        if loop:
+            self.loop = loop
+        else:
+            self.loop = asyncio.get_event_loop()
+        
+        self.loop.create_task(self._connect())
+
+    @asyncio.coroutine
+    def _connect(self):
+        while True:
+            try:
+                yield asyncio.From(self.loop.create_connection(self.__webSocket, self.addy, self.port, ssl=ssl.SSLContext(ssl.PROTOCOL_SSLv23)))          
+                return
+            except asyncio.py33_exceptions.ConnectionRefusedError:
+                print("connection refused")
+                yield asyncio.From(asyncio.sleep(5))
+                continue
+
+            except OSError:
+                print("connection failed")
+                yield asyncio.From(asyncio.sleep(5))
+                continue
+                
+        
+    def connected(self):
+        pass
 
     def recv_data(self):
         pass
 
-    def run(self):
-        connectWS(self.__webSocket)
-        if self.useReactor:
-            reactor.run(installSignalHandlers=0)
-
     def send_cmd(self, data):
-        self.__webSocket.protocol.sendMessage(json.dumps(data))
+        self.sendMessage(json.dumps(data))
 
-    def clientConnectionFailed(self, connector, reason):
+    def sendMessage(self, data):
+        pass
+
+    def clientConnectionFailed(self, wasClean, code, reason):
         print("Client connection failed .. retrying ..")
-        self.retry(connector)
-
-    def clientConnectionLost(self, connector, reason):
-        print("Client connection lost .. retrying ..")
-        self.retry(connector)
-
-    def close(self):
-        reactor.stop()
-        self.join()
-
+        self.loop.create_task(self._connect())
 
 class mSwitch(mPower, UBNTWebSocketClient):
     _dimmer_level = 0
     _output = 0
-
-    def __init__(self, ip, username, password, port=7682, useReactor=True):
+    status = {}
+    def __init__(self, ip, port, username, password):
         mPower.__init__(self)
-        UBNTWebSocketClient.__init__(self, ip, username, password, port, useReactor)
-        self.status = {}
+        UBNTWebSocketClient.__init__(self, ip, port, username, password)
+        
 
     @property
-    def dimmer_level(self):
+    def dimmer_level(self):    
         return self.dimmer_level
-
-    @dimmer_level.getter
-    def dimmer_level(self):
-        return self._dimmer_level
 
     @dimmer_level.setter
     def dimmer_level(self, value):
@@ -73,27 +93,32 @@ class mSwitch(mPower, UBNTWebSocketClient):
         return self._output
 
     @output.setter
-    def output(self, value):
+    def output(self, value):    
         self._output = value
         data = {"sensors": [{"output": value, "port": 1}]}
         self.send_cmd(data)
 
     def recv_data(self, payload, isBinary):
-        if not isBinary:
-            # print payload
-            self.status = json.loads(payload)['sensors'][0]
-            for key in self.status.keys():
-                setattr(self, '_' + key, self.status[key])
-            if self.callback is not None:
-                self.callback(self, self.status)
-        else:
-            pass
+        try:
+            if not isBinary:
+                data = json.loads(payload)
+                if "sensors" in data and len(data['sensors']) > 0:
+                    status = data['sensors'][0]
+                    for key in status.keys():
+                        setattr(self, '_' + key, status[key])
+                        if self.callback:
+                            self.callback(status)
+            else:
+                pass
+        except:
+            print("explody")
+            import sys, traceback
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+            traceback.print_exception(exc_type, exc_value, exc_traceback,
+                    limit=2, file=sys.stdout)
 
 
-def mysend():
-    val = input()
-    mFI.send_cmd(val)
-    reactor.callLater(10, mysend)
 if __name__ == '__main__':
     import argparse
 
@@ -104,12 +129,13 @@ if __name__ == '__main__':
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     args = parser.parse_args()
 
-    mFI = mSwitch(args.address, args.username, args.pwd, port=args.port)
+    mFI = mSwitch(args.address, args.port, args.username, args.pwd)
 
-    def callback(data):
-        mFI.output = not mFI.output 
+    def dataReceived(data):
+        print("switch is: {}".format(mFI.output))
    
-    mFI.callback = callback
+    mFI.callback = dataReceived
     
-    sleep(60)
-    mFI.close()
+    asyncio.get_event_loop().run_forever()
+
+    

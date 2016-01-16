@@ -8,31 +8,31 @@ class mPower(object):
 
     @property
     def power(self):
-        return self._power
+            return self._power
 
     @property
     def voltage(self):
-        return self._voltage
+            return self._voltage
 
     @property
     def powerfactor(self):
-        return self._powerfactor
+            return self._powerfactor
 
     @property
     def energy(self):
-        return self._energy
+            return self._energy
 
     @property
     def current(self):
-        return self._current
+            return self._current
 
     @power.setter
     def power(self, value):
-        self._power = value
+            self._power = value
 
     @current.setter
     def current(self, value):
-        self._current = value
+            self._current = value
 
     @voltage.setter
     def voltage(self, value):
