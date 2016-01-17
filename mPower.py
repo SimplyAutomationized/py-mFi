@@ -1,4 +1,4 @@
-class mPower(object):
+class MPower(object):
     def __init__(self):
         self._voltage = -1
         self._powerfactor = -1
