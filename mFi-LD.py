@@ -1,90 +1,11 @@
-import ssl, time
+import time
 import ujson as json
-import requests
-import trollius as asyncio
-from autobahn.asyncio.websocket import WebSocketClientProtocol, WebSocketClientFactory
 from mPower import *
+from MFiRestClient import *
+from UBNTWebSocket import *
 
 
-class MFiRest:
-    def __init__(self, ip, username, password):
-        self.label = ''
-        self.ip = ip
-        self.username = username
-        self.password = password
-        self.session = requests.Session()
-        self.url = "https://{}/".format(ip)
-        self.session.verify = False
-        self.session.get(self.url)
-        post_data = {"uri": "/", "username": self.username, "password": self.password}
-        self.session.post((self.url + "/login.cgi"), headers={"Expect": ""},
-                          data=post_data, allow_redirects=True)
-        data = (self.session.get((self.url + "/mfi/sensors.cgi"))).json()
-        for key in data['sensors'][0].keys():
-            setattr(self, key, data['sensors'][0][key])
-
-
-class UbntWebSocketProtocol(WebSocketClientProtocol):
-    def onOpen(self):
-        self.factory.client.sendMessage = self.sendMessage
-
-
-class UBNTWebSocketClient:
-    def __init__(self, ip, port, username, password, loop=None):
-
-        self.__webSocket = WebSocketClientFactory(url="wss://{}:{}/?username={}&password={}".
-                                                  format(ip, port, username, password), protocols=['mfi-protocol'])
-        self.ip = ip
-        self.port = port
-        self.callback = None
-
-        self.__webSocket.protocol = UbntWebSocketProtocol
-        self.__webSocket.protocol.onMessage = self.recv_data
-        self.__webSocket.protocol.onClose = self.clientConnectionFailed
-        self.__webSocket.client = self
-
-        if loop:
-            self.loop = loop
-        else:
-            self.loop = asyncio.get_event_loop()
-
-        self.loop.create_task(self._connect())
-
-    @asyncio.coroutine
-    def _connect(self):
-        while True:
-            try:
-                yield asyncio.From(self.loop.create_connection(self.__webSocket, self.ip, self.port,
-                                                               ssl=ssl.SSLContext(ssl.PROTOCOL_SSLv23)))
-                return
-            except asyncio.py33_exceptions.ConnectionRefusedError:
-                print("connection refused")
-                yield asyncio.From(asyncio.sleep(5))
-                continue
-
-            except OSError:
-                print("connection failed")
-                yield asyncio.From(asyncio.sleep(5))
-                continue
-
-    def connected(self):
-        pass
-
-    def recv_data(self, payload, isBinary):
-        pass
-
-    def send_cmd(self, data):
-        self.sendMessage(json.dumps(data))
-
-    def sendMessage(self, data):
-        pass
-
-    def clientConnectionFailed(self, wasClean, code, reason):
-        print("Client connection failed .. retrying ..")
-        self.loop.create_task(self._connect())
-
-
-class MSwitch(MPower, UBNTWebSocketClient, MFiRest):
+class MSwitch(MPower, UBNTWebSocketClient, MFiRestClient):
     _dimmer_level = 0
     _output = 0
     status = {}
@@ -92,7 +13,7 @@ class MSwitch(MPower, UBNTWebSocketClient, MFiRest):
     def __init__(self, ip, port, username, password):
         MPower.__init__(self)
         self.label = 'Room'
-        MFiRest.__init__(self, ip, username, password)
+        MFiRestClient.__init__(self, ip, username, password)
         UBNTWebSocketClient.__init__(self, ip, port, username, password)
 
     @property
@@ -150,7 +71,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     mFI = MSwitch(args.address, args.port, args.username, args.pwd)
-
 
     def dataReceived(data):
         print data
