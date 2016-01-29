@@ -14,6 +14,10 @@ class MFiRestClient:
     def __init__(self, ip, username, password):
         self._label = ''
         self._dimmer_mode = ''
+
+        """Temporarily set device_name to ip"""
+        self.device_name = ip
+        
         self.ip = ip
         self.username = username
         self.password = password
