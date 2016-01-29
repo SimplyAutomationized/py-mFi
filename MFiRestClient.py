@@ -17,7 +17,8 @@ class MFiRestClient:
 
         """Temporarily set device_name to ip"""
         self.device_name = ip
-        
+
+        self._dimmer_level = 0
         self.ip = ip
         self.username = username
         self.password = password
@@ -35,6 +36,15 @@ class MFiRestClient:
         json_data = data.json()
         for key in json_data['sensors'][0].keys():
             setattr(self, '_' + key, json_data['sensors'][0][key])
+
+    @property
+    def dimmer_level(self):
+        return self._dimmer_level
+
+    @dimmer_level.setter
+    def dimmer_level(self, value):
+        self.set('dimmer_level', value)
+        self.get_sensor_data()
 
     @property
     def dimmer_mode(self):
@@ -90,6 +100,7 @@ if __name__ == '__main__':
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     args = parser.parse_args()
     mFI = MFiRestClient(args.address, args.username, args.pwd)
-    print mFI.dimmer_mode
-    mFI.dimmer_mode = SWITCH
-    print mFI.dimmer_mode
+    print mFI.dimmer_level
+
+    mFI.set('dimmer_level', 50)
+    print mFI.dimmer_level
