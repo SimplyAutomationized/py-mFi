@@ -1,7 +1,7 @@
 {
     "devices": [
         {
-            "address": "192.168.1.11", 
+            "name": "mFi689981", 
             "pass": "ubnt", 
             "port": 7682, 
             "type": "switch", 
@@ -9,5 +9,5 @@
         }
     ], 
     "port": 8096, 
-    "userKey": 462714507721641
+    "userKey": "d3c64e86f092029ac89c8e049fbd3afbdc18b60ee08f109abb2317b3e7ffbf56"
 }

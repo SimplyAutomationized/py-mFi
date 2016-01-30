@@ -66,5 +66,5 @@ class UBNTWebSocketClient:
         pass
 
     def clientConnectionFailed(self, wasClean, code, reason):
-        print("Client connection failed .. retrying ..")
+        print("Client connection ({}) failed (reason={}.. retrying ..".format(self.ip, reason))
         self.loop.create_task(self._connect())

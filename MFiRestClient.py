@@ -100,7 +100,7 @@ if __name__ == '__main__':
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     args = parser.parse_args()
     mFI = MFiRestClient(args.address, args.username, args.pwd)
-    print mFI.dimmer_level
+    print (mFI.dimmer_level)
 
     mFI.set('dimmer_level', 50)
-    print mFI.dimmer_level
+    print( mFI.dimmer_level)

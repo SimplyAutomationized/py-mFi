@@ -12,6 +12,7 @@ class MSwitch(MPower, UBNTWebSocketClient, MFiRestClient):
     _dimmer_level = 0
     _output = 0
     status = {}
+    callback=None
 
     def __init__(self, ip, port, username, password):
         MPower.__init__(self)
@@ -76,7 +77,7 @@ if __name__ == '__main__':
     mFI = MSwitch(args.address, args.port, args.username, args.pwd)
 
     def dataReceived(data):
-        print data
+        print(data)
         # print("output is: {}, {} volts - {}".format(mFI.output,mFI.voltage,time.time()))
 
 
