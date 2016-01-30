@@ -56,9 +56,12 @@ class MFiDiscover:
 
         print("msg length: {}".format(len(msg)))
         i=0
-        print("byte : hex : ascii : int")
+        print("byte\t : hex\t : ascii\t : dec")
         for b in msg:
-            print("{} : {} : {} : {}".format(i, b, chr(data[i]), int(b, base=16)))
+            c = ''
+            if int(b, base=16) >= 36 and int(b, base=16) < 127:
+                c = chr(data[i])
+            print("{}\t : {}\t : {}\t : {}".format(i, b, c, int(b, base=16)))
             i+=1
 
 
