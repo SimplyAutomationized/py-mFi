@@ -3,23 +3,6 @@ import trollius as asyncio
 
 class MFiDiscover:
 
-    class Protocol(asyncio.Protocol):
-        transport = None
-    
-        def connection_made(self, transport):
-            self.transport = transport
-            print("connection made")
-
-
-        def data_received(self, data):
-            print("Received:", data)
-
-            self.transport.close()
-
-        def connection_lost(self, exc):
-            # The socket has been closed, stop the event loop
-            loop.stop()
-
     def __init__(self, loop=None):
         self.discoveryPayload = bytearray()
         self.discoveryPayload.append(0x01)
@@ -29,18 +12,14 @@ class MFiDiscover:
 
         self.sock = socket(AF_INET, SOCK_DGRAM)
         self.sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
-        #sock.settimeout(3)
+        self.sock.setblocking(0)
 
         self.loop = loop
         if not self.loop:
             self.loop = asyncio.get_event_loop()
 
-        connect_coro = self.loop.create_connection(MFiDiscover.Protocol, sock=self.sock)
-        self.transport, self.protocol = self.loop.run_until_complete(connect_coro)      
-
-        self.protocol.data_received = self._data_received
-
         self.loop.create_task(self.sendDiscovery())
+        self.loop.create_task(self.readData())
 
     @asyncio.coroutine
     def sendDiscovery(self):
@@ -50,8 +29,27 @@ class MFiDiscover:
             #sleep for 10 mins:
             yield asyncio.From(asyncio.sleep(600))
 
-    def _data_received(self, data):
-        print("Received:", data)
+    @asyncio.coroutine
+    def readData(self):
+        while True:
+            try:
+                data, addrport = self.sock.recvfrom(1024)
+                address, port = addrport
+                print("Received:", data, address)
+            except BlockingIOError:
+                yield asyncio.From(asyncio.sleep(3))
+            except:
+                import sys, traceback
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+                traceback.print_exception(exc_type, exc_value, exc_traceback,
+                        limit=2, file=sys.stdout)
+                yield asyncio.From(asyncio.sleep(3))
+                
+
+            
+
+
 
 def testDiscoverMFI():
     sock = socket(AF_INET, SOCK_DGRAM)
