@@ -49,6 +49,7 @@ class MFiDiscover:
 
     def parseData(self, data, address):
         import binascii
+
         def split(str, num):
             return [ str[start:start+num] for start in range(0, len(str), num) ]
 
@@ -64,6 +65,38 @@ class MFiDiscover:
             print("{}\t : {}\t : {}\t : {}".format(i, b, c, int(b, base=16)))
             i+=1
 
+        class ByteMe:
+            index = 0
+            def __init__(self, msg):
+                self.msg = msg
+
+            def next(self):
+                d = self.msg[self.index]
+                self.index += 1
+                return int(d, base=16)
+
+        r = ByteMe(msg)
+
+        while r.index < len(msg):
+
+            lsb = r.next()
+            fieldId = (r.next() << 8) | lsb
+
+            print("field id: {}".format(fieldId))
+
+            fieldLength = r.next()
+
+            print("field length: {}".format(fieldLength))
+
+            field = []
+            for n in range(fieldLength):
+                b = r.next()
+                #conver to ascii if we can
+                if b >= 36 and b < 127:
+                    b = chr(b)
+                field.append(b)
+
+            print("field:", field)
 
 def testDiscoverMFI():
     sock = socket(AF_INET, SOCK_DGRAM)
