@@ -48,10 +48,27 @@ class MFiDiscover:
 
     def _data_received(self, data):
         print("Received:", data.decode())
-        
+
+def testDiscoverMFI():
+    data = 0x01000000
+    sock = socket(AF_INET, SOCK_DGRAM)
+    sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+    sock.settimeout(30)
+    sock.sendto(bytearray.fromhex(str(data)), ('<broadcast>', 10001))
+    recv = ''
+    MFIs = []
+    while True:
+        try:
+            response = sock.recvfrom(1024)
+        except:
+            break
+        print response
+    # Parse response        
 
 if __name__ == '__main__':
 
-    discovery = MFiDiscover()
+    testDiscoverMFI()
 
-    asyncio.get_event_loop().run_forever()
+    #discovery = MFiDiscover()
+
+    #asyncio.get_event_loop().run_forever()
