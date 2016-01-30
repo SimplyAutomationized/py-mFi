@@ -1,12 +1,13 @@
 {
-	"port" : 8096,
-	"devices" : [
-		{
-			"type" : "switch",
-			"address" : "192.168.1.11",
-			"port" : 7682,
-			"user" : "ubnt",
-			"pass" : "ubnt"
-		}
-	]
+    "devices": [
+        {
+            "address": "192.168.1.11", 
+            "pass": "ubnt", 
+            "port": 7682, 
+            "type": "switch", 
+            "user": "ubnt"
+        }
+    ], 
+    "port": 8096, 
+    "userKey": 462714507721641
 }

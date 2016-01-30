@@ -1,5 +1,8 @@
 import time
-import ujson as json
+try:
+    import ujson as json
+except ImportError:
+    import json
 from mPower import *
 from MFiRestClient import *
 from UBNTWebSocket import *

@@ -1,5 +1,10 @@
 import trollius as asyncio
-import ujson as json
+
+try:
+    import ujson as json
+except ImportError:
+    import json
+
 import ssl
 from autobahn.asyncio.websocket import WebSocketClientProtocol, WebSocketClientFactory
 

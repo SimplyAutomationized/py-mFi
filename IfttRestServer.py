@@ -42,7 +42,7 @@ from datetime import datetime
 import trollius as asyncio
 
 
-from mFi-LD import MSwitch
+from MSwitch import MSwitch
 
 class mFiDeviceWrapper(Resource):
 	def __init__(self, device, key="TESTKEY"):
@@ -90,7 +90,7 @@ class mFiDeviceWrapper(Resource):
 					continue
 				
 				if cmd == "dim":
-					if value < 0 or value > 100
+					if value < 0 or value > 100:
 						print("invalid value")
 						continue
 
@@ -124,8 +124,8 @@ class mFiDeviceWrapper(Resource):
 		return replyData
 
 class Root(Resource):
-	def __init__(self):
-		Resource.__init__(self, userKey)
+	def __init__(self, userKey):
+		Resource.__init__(self)
 		self.devices = []
 		self.userKey = userKey
 		
@@ -219,56 +219,58 @@ def generateKey(numBits):
 	return random.getrandbits(numBits)
 
 if __name__ == '__main__':
-    import argparse
+	import argparse
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('port', help="port", default=8096, nargs="?")
-    parser.add_argument('--config', help='config', default='config.json')
+	parser = argparse.ArgumentParser()
+	parser.add_argument('port', help="port", default=8096, nargs="?")
+	parser.add_argument('--config', help='config', default='config.json')
 
-    args = parser.parse_args()
+	args = parser.parse_args()
 
-    with open(args.config, "r") as configFile:
-			config = json.loads(configFile.read())
+	with open(args.config, "r") as configFile:
+		config = json.loads(configFile.read())
 
-		if not "userKey" in config:
-			"generate a key and write it to the config file"
-			userKey = generateKey(50)
-			config["userKey"] = userKey
-			with open(args.config, "w") as cf:
-				cf.write(json.dumps(config, sort_keys=True, indent=4, separators=(', ', ': ')))
+	userKey = ""
 
-		useSsl = True
-		sslKey = ""
-		sslCrt = ""
+	if not "userKey" in config:
+		"generate a key and write it to the config file"
+		userKey = generateKey(50)
+		config["userKey"] = userKey
 
-		if not "sslKey" in config or not "sslCrt" in config:
-			useSsl = False
-		else:
-			sslKey = config["sslKey"]
-			sslCrt = config["sslCrt"]
+		with open(args.config, "w") as cf:
+			cf.write(json.dumps(config, sort_keys=True, indent=4, separators=(', ', ': ')))
 
-		port = args.port
+	useSsl = True
+	sslKey = ""
+	sslCrt = ""
 
-		if "port" in config:
-			port = config["port"]
+	if not "sslKey" in config or not "sslCrt" in config:
+		useSsl = False
+	else:
+		sslKey = config["sslKey"]
+		sslCrt = config["sslCrt"]
 
-    server = RestServer(port=args.port, userKey=userKey, useSsl=useSsl, keyPath=sslKey, certPath=sslCrt)
+	port = args.port
 
-    devices = config["devices"]
+	if "port" in config:
+		port = config["port"]
 
-    for d in devices:
-    	addy = d["address"]
-    	port = d["port"]
-    	user = d["user"]
-    	passwd = d["pass"]
-    	devtype = d["type"]
+ 	server = RestServer(port=args.port, userKey=userKey, useSsl=useSsl, keyPath=sslKey, certPath=sslCrt)
 
-    	if devtype == "switch":
-    		device = MSwitch(addy, port, user, passwd)
+	devices = config["devices"]
 
-    		server.addDevice(device)
+	for d in devices:
+		addy = d["address"]
+		port = d["port"]
+		user = d["user"]
+		passwd = d["pass"]
+		devtype = d["type"]
 
-    server.startInThread()
+		if devtype == "switch":
+			device = MSwitch(addy, port, user, passwd)
+			server.addDevice(device)
 
-    asyncio.get_event_loop().run_forever()
+	server.startInThread()
+
+	asyncio.get_event_loop().run_forever()
 
