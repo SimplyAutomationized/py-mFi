@@ -35,7 +35,8 @@ class MFiDiscover:
             try:
                 data, addrport = self.sock.recvfrom(1024)
                 address, port = addrport
-                print("Received:", data, address)
+                self.parseData(data, address)
+                
             except BlockingIOError:
                 yield asyncio.From(asyncio.sleep(3))
             except:
@@ -45,10 +46,20 @@ class MFiDiscover:
                 traceback.print_exception(exc_type, exc_value, exc_traceback,
                         limit=2, file=sys.stdout)
                 yield asyncio.From(asyncio.sleep(3))
-                
 
-            
+    def parseData(self, data, address):
+        import binascii
+        def split(str, num):
+            return [ str[start:start+num] for start in range(0, len(str), num) ]
 
+        msg = split(binascii.hexlify(data), 2)
+
+        print("msg length: {}".format(len(msg)))
+        i=0
+        print("byte : hex : ascii : int")
+        for b in msg:
+            print("{} : {} : {} : {}".format(i, b, chr(data[i]), int(b, base=16)))
+            i+=1
 
 
 def testDiscoverMFI():
