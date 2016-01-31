@@ -1,9 +1,11 @@
-import requests
+import requests, time
+from BeautifulSoup import BeautifulSoup
 
 DIMMER = "dimmer"
 SWITCH = "switch"
 
-class MFiRestClient:
+
+class MFiRestClient(object):
     """
     TODO:
         sroutes.cgi , parse into json
@@ -16,10 +18,11 @@ class MFiRestClient:
         self._dimmer_mode = ''
 
         """Temporarily set device_name to ip"""
-        self.device_name = ip
-
+        self._device_name = ip
+        self._output = 0
         self._dimmer_level = 0
         self.ip = ip
+        self._lock
         self.username = username
         self.password = password
         self.session = requests.Session()
@@ -31,6 +34,9 @@ class MFiRestClient:
                           data=post_data, allow_redirects=True)
         self.get_sensor_data()
 
+    def get_routing_table(self):
+        data = self.get('sroutes.cgi')
+
     def get_sensor_data(self):
         data = (self.session.get((self.url + "/mfi/sensors.cgi")))
         json_data = data.json()
@@ -38,12 +44,12 @@ class MFiRestClient:
             setattr(self, '_' + key, json_data['sensors'][0][key])
 
     @property
-    def dimmer_level(self):
-        return self._dimmer_level
+    def output(self):
+        return self._output
 
-    @dimmer_level.setter
-    def dimmer_level(self, value):
-        self.set('dimmer_level', value)
+    @output.setter
+    def output(self, value):
+        self.set('output', value)
         self.get_sensor_data()
 
     @property
@@ -54,31 +60,40 @@ class MFiRestClient:
     def dimmer_mode(self, value):
         if value is not 'switch' or value is not 'dimmer':
             raise ValueError
-            self.set('dimmer_mode', value)
-            self.get_sensor_data()
+        self.set('dimmer_mode', value)
 
-            # def label(self):
-            #     return self._label
-            #
-            # @label.setter
-            # def label(self, value):
-            #     '''
-            #     TODO: set label using rest post
-            #     :param value:
-            #     :return:
-            #     '''
-            #     #self._label = value
-            #
-            #
-            #
-            # def send_cfgcmd(self, config_string):
-            #     files = {'file': ('config.cfg', config_string)}
-            #     p = self.session.post((self.url + "/system.cgi"), files=files)
-            #     return p.text
+    @property
+    def dimmer_level(self):
+        self.get_sensor_data()
+        return self._dimmer_level
 
+    @dimmer_level.setter
+    def dimmer_level(self, value):
+        self.set('dimmer_level', value)
+        self.get_sensor_data()
+
+    @property
+    def device_name(self):
+        return self._device_name
+
+    @device_name.setter
+    def label(self, value):
+        self.set('label', value)
+
+    @property
+    def lock(self):
+        self.get_sensor_data()
+        return self._lock
+
+    @lock.setter
+    def lock(self, value):
+        self.set('lock', value)
+
+    @property
     def site_survey(self):
         return self.get('survey.json.cgi')
 
+    @property
     def signal(self):
         return self.get('signal.cgi')
 
@@ -87,9 +102,22 @@ class MFiRestClient:
 
     def set(self, resource, value):
         data = {resource: value}
-        response = self.session.put("{}/sensors/1/".format(self.url), data=data)
+        response = self.session.post(
+            "{}/mfi/sensors.cgi?id={}&{}={}/".format(self.url, 1, resource, value))  # , data=data)
         return response
 
+
+def mFIClientTest(mfi):
+    mfi.output = 1
+    mfi.dimmer_level = 0
+    # mFI.dimmer_level = 50
+    for x in range(1, 100, 5):
+        mfi.dimmer_level = x
+        time.sleep(.02)
+    mfi.output = 0
+    mfi.dimmer_mode = SWITCH
+    time.sleep(5)
+    mfi.lock=1
 
 if __name__ == '__main__':
     import argparse
@@ -100,7 +128,3 @@ if __name__ == '__main__':
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     args = parser.parse_args()
     mFI = MFiRestClient(args.address, args.username, args.pwd)
-    print mFI.dimmer_level
-
-    mFI.set('dimmer_level', 50)
-    print mFI.dimmer_level
