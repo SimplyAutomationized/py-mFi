@@ -1,5 +1,4 @@
-import requests, time
-from BeautifulSoup import BeautifulSoup
+import requests
 
 DIMMER = "dimmer"
 SWITCH = "switch"

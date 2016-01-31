@@ -1,9 +1,98 @@
 from socket import *
 import trollius as asyncio
+from MSwitch import MSwitch
 
-class MFiDiscover:
+class M:
+    
+    idsMap = {}
+
+    @staticmethod
+    def field(id):
+        def make_field(func):
+            M.idsMap[id] = func
+            return func
+        return make_field
+
+class MFiUdpMsgParse: 
+    def __init__(self, address):
+        self.device_class = None
+        self.address = address
+
+    def parse_device(self, msg):
+
+        class ByteMe:
+            index = 0
+            def __init__(self, msg):
+                self.msg = msg
+
+            def next(self):
+                d = self.msg[self.index]
+                self.index += 1
+                return int(d, base=16)
+
+        r = ByteMe(msg)
+
+        while r.index < len(msg):
+
+            lsb = r.next()
+            fieldId = (r.next() << 8) | lsb
+
+            fieldLength = r.next()
+            field = []
+
+            for n in range(fieldLength):
+                b = r.next()
+                #conver to ascii if we can
+                if b >= 36 and b < 127:
+                    b = chr(b)
+                field.append(b)
+
+            self.parse_field(self, fieldId, field)
+
+        if self.device_type == "IWD1U":
+            self.device_class = MSwitch
+
+    def __call__(self, address, port, user, pwd):
+        if not self.device_class:
+            return None
+        d = self.device_class(address, port, user, pwd)
+        d.device_name = self.device_name
+        d.firmware_version = self.firmware_version
+
+        return d
+
+    def parse_field(self, instance, id, field):
+        if id in M.idsMap:
+            M.idsMap[id](instance, field)
+
+    @M.field(11)
+    def parse_device_name(self, data):
+        self.device_name = self._to_string(data)
+
+    @M.field(12)
+    def parse_device_type(self, data):
+        self.device_type = self._to_string(data)
+
+    @M.field(13)
+    def parse_ssid(self, data):
+        self.ssid = self._to_string(data)
+
+    @M.field(3)
+    def parse_firmware_version(self, data):
+        self.firmware_version = self._to_string(data)        
+
+    def _to_string(self, data):
+        s = ""
+        for d in data:
+            s += d
+        return s
+
+
+class MFiDiscovery:
 
     def __init__(self, loop=None):
+        self.devices = []
+
         self.discoveryPayload = bytearray()
         self.discoveryPayload.append(0x01)
         self.discoveryPayload.append(0x00)
@@ -37,14 +126,16 @@ class MFiDiscover:
                 address, port = addrport
                 self.parseData(data, address)
                 
-            except BlockingIOError:
-                yield asyncio.From(asyncio.sleep(3))
+            #except BlockingIOError:
+            #    yield asyncio.From(asyncio.sleep(3))
+
             except:
-                import sys, traceback
+                """import sys, traceback
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
                 traceback.print_exception(exc_type, exc_value, exc_traceback,
                         limit=2, file=sys.stdout)
+                """
                 yield asyncio.From(asyncio.sleep(3))
 
     def parseData(self, data, address):
@@ -55,48 +146,18 @@ class MFiDiscover:
 
         msg = split(binascii.hexlify(data), 2)
 
-        print("msg length: {}".format(len(msg)))
-        i=0
-        print("byte\t : hex\t : ascii\t : dec")
-        for b in msg:
-            c = ''
-            if int(b, base=16) >= 36 and int(b, base=16) < 127:
-                c = chr(data[i])
-            print("{}\t : {}\t : {}\t : {}".format(i, b, c, int(b, base=16)))
-            i+=1
+        device = MFiUdpMsgParse(address)
+        device.parse_device(msg)
 
-        class ByteMe:
-            index = 0
-            def __init__(self, msg):
-                self.msg = msg
+        has = False
 
-            def next(self):
-                d = self.msg[self.index]
-                self.index += 1
-                return int(d, base=16)
+        for d in self.devices:
+            if d.device_name == device.device_name:
+                has = True
+                break
 
-        r = ByteMe(msg)
-
-        while r.index < len(msg):
-
-            lsb = r.next()
-            fieldId = (r.next() << 8) | lsb
-
-            print("field id: {}".format(fieldId))
-
-            fieldLength = r.next()
-
-            print("field length: {}".format(fieldLength))
-
-            field = []
-            for n in range(fieldLength):
-                b = r.next()
-                #conver to ascii if we can
-                if b >= 36 and b < 127:
-                    b = chr(b)
-                field.append(b)
-
-            print("field:", field)
+        if not has:
+            self.devices.append(device)
 
 def testDiscoverMFI():
     sock = socket(AF_INET, SOCK_DGRAM)
@@ -123,8 +184,13 @@ def testDiscoverMFI():
 
 if __name__ == '__main__':
 
-    #testDiscoverMFI()
+    loop = asyncio.get_event_loop()
 
-    discovery = MFiDiscover()
+    discovery = MFiDiscovery()
 
-    asyncio.get_event_loop().run_forever()
+    loop.run_until_complete(asyncio.sleep(10))
+
+    for d in discovery.devices:
+        print("discovered: {}".format(d.device_name))
+
+    loop.run_forever()

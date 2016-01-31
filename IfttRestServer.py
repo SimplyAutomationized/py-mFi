@@ -42,13 +42,13 @@ from datetime import datetime
 import trollius as asyncio
 
 
-from MSwitch import MSwitch
+from MFiDiscovery import MFiDiscovery
 
 class mFiDeviceWrapper(Resource):
 	def __init__(self, device, key="TESTKEY"):
 		self.device = device
 		self.key = key
-		self.queue = asncio.Queue
+		self.queue = asyncio.Queue()
 
 		self.loop = asyncio.get_event_loop()
 		self.loop.create_task(self.parseMsg())
@@ -139,8 +139,6 @@ class Root(Resource):
 			dev = mFiDeviceWrapper(device, self.userKey)
 			self.devices.append(dev)
 
-		dev.addResource(device)
-
 		self.putChild(device.device_name, dev)
 
 	def getChild(self, name, request):
@@ -215,8 +213,17 @@ def generateKey(numBits):
 			from Crypto.Random import random
 		except:
 			from random import random
+
+	try:
+		from Crypto.Hash.SHA256 import SHA256Hash as sha256
+	except:
+		from hashlib import sha256 
 		
-	return random.getrandbits(numBits)
+	from binascii import hexlify
+
+	s = sha256()
+	s.update(str(random.getrandbits(numBits)))
+	return hexlify(s.digest())
 
 if __name__ == '__main__':
 	import argparse
@@ -227,6 +234,8 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
+	loop = asyncio.get_event_loop()
+
 	with open(args.config, "r") as configFile:
 		config = json.loads(configFile.read())
 
@@ -234,7 +243,7 @@ if __name__ == '__main__':
 
 	if not "userKey" in config:
 		"generate a key and write it to the config file"
-		userKey = generateKey(50)
+		userKey = generateKey(256)
 		config["userKey"] = userKey
 
 		with open(args.config, "w") as cf:
@@ -255,22 +264,27 @@ if __name__ == '__main__':
 	if "port" in config:
 		port = config["port"]
 
- 	server = RestServer(port=args.port, userKey=userKey, useSsl=useSsl, keyPath=sslKey, certPath=sslCrt)
+	discover = MFiDiscovery()
+
+	"try to discover all the devices"
+	loop.run_until_complete(asyncio.sleep(10))
+
+	server = RestServer(port=args.port, userKey=userKey, useSsl=useSsl, keyPath=sslKey, certPath=sslCrt)
 
 	devices = config["devices"]
 
 	for d in devices:
-		addy = d["address"]
+		name = d["name"]
 		port = d["port"]
 		user = d["user"]
 		passwd = d["pass"]
-		devtype = d["type"]
-
-		if devtype == "switch":
-			device = MSwitch(addy, port, user, passwd)
-			server.addDevice(device)
+		
+		for discovered in discover.devices:
+			if discovered.device_name == name:
+				print("found matching device: ", name)
+				server.addDevice(discovered(discovered.address, port, user, passwd))
 
 	server.startInThread()
 
-	asyncio.get_event_loop().run_forever()
+	loop.run_forever()
 
