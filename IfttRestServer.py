@@ -54,23 +54,30 @@ class mFiDeviceWrapper(Resource):
 		self.loop.create_task(self.parseMsg())
 
 	def render_POST(self, httprequest):
+		print("POST request")
 		body = httprequest.content.read()
+
+		print("POST body: {}".format(body))
 
 		try:
 			msg = json.loads(body)
+			self.queue.put_nowait(msg)
 		except:
 			print("malformed body")
-			return
+			return "malformed body.  body must be json"
 
-			self.queue.put(msg)
+		return ""
 
+		
 	@asyncio.coroutine
 	def parseMsg(self):
-
+		print("parseMsg started")
 		try:
 			while True:
 
 				msg = yield asyncio.From(self.queue.get())
+
+				print("got msg!!! {}".format(msg))
 
 				if not "userKey" in msg or not "command" in msg:
 					print("userKey and/or command missing")
@@ -80,6 +87,7 @@ class mFiDeviceWrapper(Resource):
 
 				if key != self.key:
 					print("invalid key")
+					print("my key is: ", self.key)
 					continue
 
 				try:
@@ -115,7 +123,8 @@ class mFiDeviceWrapper(Resource):
 
 
 	def render_GET(self, httprequest):
-		r = {}
+		print("GET request")
+		r = {"hello" : "world"}
 
 		replyData = json.dumps(r)
 		httprequest.setHeader('Content-Type', 'application/json;charset=UTF-8')
@@ -182,6 +191,38 @@ class RestServer:
 		self.serverKey = keyPath
 		self.cert = certPath
 
+	def openPort(self):
+		try:
+			import gi
+			gi.require_version('GUPnPIgd', '1.0')
+			from gi.repository import GLib, GUPnPIgd
+			
+
+			my_ip = "192.168.1.40"
+
+			igd = GUPnPIgd.SimpleIgd()
+
+			main = GLib.MainLoop()
+
+			def mep(igd, proto, eip, erip, port, localip, lport, msg):
+			    if port == self.port:
+			    	print("port opened successfully!")
+			        main.quit()
+
+			igd.connect("mapped-external-port", mep)
+			
+			#igd.add_port("PROTO", EXTERNAL_PORT, INTERNAL_IP, INTERNAL_PORT, LEASE_DURATION_IN_SECONDS, "NAME")
+			igd.add_port("TCP", self.port, my_ip, self.port, 0, "iftt_mfi")
+
+			main.run()
+		except:
+			import sys, traceback
+			exc_type, exc_value, exc_traceback = sys.exc_info()
+			traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+			traceback.print_exception(exc_type, exc_value, exc_traceback,
+					limit=2, file=sys.stdout)
+
+
 	def run(self, signals = 1):
 		print("Starting server")
 
@@ -231,6 +272,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('port', help="port", default=8096, nargs="?")
 	parser.add_argument('--config', help='config', default='config.json')
+	parser.add_argument('--upnp', help='use upnp to open port',action = 'store_true')
 
 	args = parser.parse_args()
 
@@ -248,6 +290,8 @@ if __name__ == '__main__':
 
 		with open(args.config, "w") as cf:
 			cf.write(json.dumps(config, sort_keys=True, indent=4, separators=(', ', ': ')))
+	else:
+		userKey = config["userKey"]
 
 	useSsl = True
 	sslKey = ""
@@ -283,6 +327,9 @@ if __name__ == '__main__':
 			if discovered.device_name == name:
 				print("found matching device: ", name)
 				server.addDevice(discovered(discovered.address, port, user, passwd))
+
+	if args.upnp:
+		server.openPort()
 
 	server.startInThread()
 

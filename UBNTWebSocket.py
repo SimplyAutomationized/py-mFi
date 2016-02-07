@@ -67,4 +67,5 @@ class UBNTWebSocketClient:
 
     def clientConnectionFailed(self, wasClean, code, reason):
         print("Client connection ({}) failed (reason={}.. retrying ..".format(self.ip, reason))
+        yield asyncio.From(asyncio.sleep(5))
         self.loop.create_task(self._connect())

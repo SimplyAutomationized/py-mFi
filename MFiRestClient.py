@@ -37,10 +37,13 @@ class MFiRestClient(object):
         data = self.get('sroutes.cgi')
 
     def get_sensor_data(self):
-        data = (self.session.get((self.url + "/mfi/sensors.cgi")))
-        json_data = data.json()
-        for key in json_data['sensors'][0].keys():
-            setattr(self, '_' + key, json_data['sensors'][0][key])
+        try:
+            data = (self.session.get((self.url + "/mfi/sensors.cgi")))
+            json_data = data.json()
+            for key in json_data['sensors'][0].keys():
+                setattr(self, '_' + key, json_data['sensors'][0][key])
+        except:
+            print("bad data returned: ", str(data))
 
     @property
     def output(self):

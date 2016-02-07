@@ -113,7 +113,6 @@ class MFiDiscovery:
     @asyncio.coroutine
     def sendDiscovery(self):
         while True:
-            print("sending discovery packet")
             self.sock.sendto(self.discoveryPayload, ('<broadcast>', 10001))
             #sleep for 10 mins:
             yield asyncio.From(asyncio.sleep(600))
