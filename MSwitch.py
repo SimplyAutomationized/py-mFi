@@ -3,7 +3,7 @@ try:
     import ujson as json
 except ImportError:
     import json
-from mPower import MPower
+from MPower import MPower
 
 
 

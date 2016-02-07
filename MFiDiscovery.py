@@ -1,6 +1,7 @@
 from socket import *
 import trollius as asyncio
 from MSwitch import MSwitch
+from MPower import MPower
 
 class M:
     
@@ -51,6 +52,8 @@ class MFiUdpMsgParse:
 
         if self.device_type == "IWD1U":
             self.device_class = MSwitch
+        elif self.device_type == "IWO2U"
+            self.device_class = MPower
 
     def __call__(self, address, port, user, pwd):
         if not self.device_class:
@@ -190,6 +193,6 @@ if __name__ == '__main__':
     loop.run_until_complete(asyncio.sleep(10))
 
     for d in discovery.devices:
-        print("discovered: {}".format(d.device_name))
+        print("discovered: {}, type: {}, address: {}".format(d.device_name, d.device_type, d.address))
 
     loop.run_forever()
