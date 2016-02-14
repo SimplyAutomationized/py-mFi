@@ -11,14 +11,14 @@ except ImportError:
 
 import time
 
-class MPower(object, UBNTWebSocketClient, MFiRestClient):
+class MPower(UBNTWebSocketClient, MFiRestClient):
     def __init__(self, ip, port, username, password, device_name = "unknown"):
-        
+
         MFiRestClient.__init__(self, ip, username, password)
         UBNTWebSocketClient.__init__(self, ip, port, username, password)
 
         self.device_name = device_name
-        
+
         self._voltage = -1
         self._powerfactor = -1
         self._energy = -1

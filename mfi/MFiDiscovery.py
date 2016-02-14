@@ -52,7 +52,7 @@ class MFiUdpMsgParse:
 
         if self.device_type == "IWD1U":
             self.device_class = MSwitch
-        elif self.device_type == "IWO2U"
+        elif self.device_type == "IWO2U":
             self.device_class = MPower
 
     def __call__(self, address, port, user, pwd):
