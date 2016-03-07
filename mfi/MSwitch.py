@@ -10,11 +10,12 @@ from MPower import MPower
 class MSwitch(MPower):
     _dimmer_level = 0
     _output = 0
+    _lock = 0
     status = {}
     callback=None
 
     def __init__(self, ip, port, username, password):
-        MPower.__init__(self, ip, port, username, password)        
+        MPower.__init__(self, ip, port, username, password)
 
     @property
     def dimmer_level(self):
@@ -29,6 +30,7 @@ class MSwitch(MPower):
 
 if __name__ == '__main__':
     import argparse
+    import trollius as asyncio
 
     parser = argparse.ArgumentParser()
     parser.add_argument('address', help="address", default="localhost", nargs="?")

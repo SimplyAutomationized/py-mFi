@@ -54,6 +54,8 @@ class MFiUdpMsgParse:
             self.device_class = MSwitch
         elif self.device_type == "IWO2U":
             self.device_class = MPower
+        else:
+            print("unsupported device type discovered: {}".format(self.device_type))
 
     def __call__(self, address, port, user, pwd):
         if not self.device_class:

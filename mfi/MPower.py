@@ -11,10 +11,12 @@ except ImportError:
 
 import time
 
-class MPower(UBNTWebSocketClient, MFiRestClient):
+class MPower(UBNTWebSocketClient):
+    _lock = -1
+
     def __init__(self, ip, port, username, password, device_name = "unknown"):
 
-        MFiRestClient.__init__(self, ip, username, password)
+        #MFiRestClient.__init__(self, ip, username, password)
         UBNTWebSocketClient.__init__(self, ip, port, username, password)
 
         self.device_name = device_name
@@ -24,6 +26,7 @@ class MPower(UBNTWebSocketClient, MFiRestClient):
         self._energy = -1
         self._current = -1
         self._power = -1
+        self._output = -1
 
     @property
     def power(self):
@@ -75,6 +78,10 @@ class MPower(UBNTWebSocketClient, MFiRestClient):
         data = {"sensors": [{"output": value, "port": 1}]}
         self.send_cmd(data)
 
+    def set_output(self, port, value):
+        data = {"sensors": [{"output": value, "port": port}]}
+        self.send_cmd(data)
+
     def recv_data(self, payload, isBinary):
         try:
             if not isBinary:
@@ -106,6 +113,9 @@ if __name__ == '__main__':
     parser.add_argument('port', help="port", default=7682, nargs="?")
     parser.add_argument('username', help='username', default='ubnt', nargs="?")
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
+    parser.add_argument('--on', help='toggle output', default='output', action="store_true")
+    parser.add_argument('--off', help='toggle output off', default='output', action="store_true")
+
     args = parser.parse_args()
 
     mFI = MPower(args.address, args.port, args.username, args.pwd)
@@ -116,5 +126,11 @@ if __name__ == '__main__':
 
 
     mFI.callback = dataReceived
+
+    if args.on:
+        mFI.set_output(1, True)
+
+    if args.off:
+        mFI.set_output(1, False)
 
     asyncio.get_event_loop().run_forever()

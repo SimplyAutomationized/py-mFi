@@ -42,7 +42,7 @@ from datetime import datetime
 import trollius as asyncio
 
 
-from MFiDiscovery import MFiDiscovery
+from mfi.MFiDiscovery import MFiDiscovery
 
 class mFiDeviceWrapper(Resource):
 	def __init__(self, device, key="TESTKEY"):
