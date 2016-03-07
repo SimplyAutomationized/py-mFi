@@ -115,10 +115,13 @@ class MFiDiscovery:
         self.loop.create_task(self.sendDiscovery())
         self.loop.create_task(self.readData())
 
+    def discover(self):
+        self.sock.sendto(self.discoveryPayload, ('<broadcast>', 10001))
+
     @asyncio.coroutine
     def sendDiscovery(self):
         while True:
-            self.sock.sendto(self.discoveryPayload, ('<broadcast>', 10001))
+            self.discover()
             #sleep for 10 mins:
             yield asyncio.From(asyncio.sleep(600))
 
@@ -190,7 +193,9 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
 
+    print("discovering...")
     discovery = MFiDiscovery()
+    discovery.discover()
 
     loop.run_until_complete(asyncio.sleep(10))
 
