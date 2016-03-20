@@ -1,7 +1,9 @@
 from MFiDiscovery import MFiDiscovery
+from MSwitch import MSwitch
+
 import trollius as asyncio
 import parser, requests, argparse
-from concurrent.futures import ProcessPoolExecutor
+
 
 post_url = ''
 
@@ -11,7 +13,7 @@ def dataReceived(data):
     print data
     session = requests.Session()
     session.verify = False
-    session.post('http://{}/users/1/web_requests/7/super_s3cret_mf1_string'.format(post_url), data=data)
+    # session.post('http://{}:3000/users/1/web_requests/7/super_s3cret_mf1_string'.format(post_url), data=data)
 
 
 if __name__ == '__main__':
@@ -25,12 +27,13 @@ if __name__ == '__main__':
     #
     discovery = MFiDiscovery()
     post_url = args.post_url
-    loop.run_until_complete(asyncio.sleep(10))
+    asyncio.get_event_loop().run_until_complete(asyncio.sleep(10))
     mymFI = []
 
     for device in discovery.devices:
-        mfi = device(device.address, args.port, args.username, args.pwd)
-        mfi.callback = dataReceived
-        mymFI.append(mfi)
+        d = device.device_class(device.address, args.port, args.username, args.pwd)
+        d.device_name = device.device_name
+        d.callback = dataReceived
+        mymFI.append(d)
 
-    loop.run_forever()
+    asyncio.get_event_loop().run_forever()
