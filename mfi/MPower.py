@@ -115,6 +115,8 @@ if __name__ == '__main__':
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     parser.add_argument('--on', help='toggle output', action="store_true")
     parser.add_argument('--off', help='toggle output off', action="store_true")
+    parser.add_argument('--output', help='output index', type=int, default=1)
+    
 
     args = parser.parse_args()
 
@@ -131,10 +133,10 @@ if __name__ == '__main__':
 	print ("on connected")
         try:
             if args.on:
-                mFI.set_output(0, True)
+                mFI.set_output(args.output, True)
 
             elif args.off:
-                mFI.set_output(0, False)
+                mFI.set_output(args.output, False)
         except:
             print("caught exception in onConnected")
 
