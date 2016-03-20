@@ -113,8 +113,8 @@ if __name__ == '__main__':
     parser.add_argument('port', help="port", default=7682, nargs="?")
     parser.add_argument('username', help='username', default='ubnt', nargs="?")
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
-    parser.add_argument('--on', help='toggle output', default='output', action="store_true")
-    parser.add_argument('--off', help='toggle output off', default='output', action="store_true")
+    parser.add_argument('--on', help='toggle output', action="store_true")
+    parser.add_argument('--off', help='toggle output off', action="store_true")
 
     args = parser.parse_args()
 
@@ -127,10 +127,17 @@ if __name__ == '__main__':
 
     mFI.callback = dataReceived
 
-    if args.on:
-        mFI.set_output(1, True)
+    def onConnected(client):
+	print ("on connected")
+        try:
+            if args.on:
+                mFI.set_output(0, True)
 
-    if args.off:
-        mFI.set_output(1, False)
+            elif args.off:
+                mFI.set_output(0, False)
+        except:
+            print("caught exception in onConnected")
+
+    mFI.connected = onConnected
 
     asyncio.get_event_loop().run_forever()

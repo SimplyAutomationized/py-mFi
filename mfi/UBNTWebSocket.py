@@ -11,11 +11,12 @@ from autobahn.asyncio.websocket import WebSocketClientProtocol, WebSocketClientF
 
 class UBNTWebSocketProtocol(WebSocketClientProtocol):
     def onOpen(self):
+        print("connected!")
         self.sendMessage(json.dumps({"time": 10}))
         self.factory.client.sendMessage = self.sendMessage
+        self.factory.client.connected(None)
 
-
-class UBNTWebSocketClient:
+class UBNTWebSocketClient(object):
     def __init__(self, ip, port, username, password, loop=None):
 
         self.__webSocket = WebSocketClientFactory(url="wss://{}:{}/?username={}&password={}".
@@ -34,7 +35,7 @@ class UBNTWebSocketClient:
         else:
             self.loop = asyncio.get_event_loop()
 
-        self.loop.create_task(self._connect())
+        self.loop.run_until_complete(self._connect())
 
     @asyncio.coroutine
     def _connect(self):
@@ -60,9 +61,11 @@ class UBNTWebSocketClient:
         pass
 
     def send_cmd(self, data):
+        print('sending {}'.format(data))
         self.sendMessage(json.dumps(data))
 
     def sendMessage(self, data):
+        print("Not connected...")
         pass
 
     def clientConnectionFailed(self, wasClean, code, reason):

@@ -4,7 +4,7 @@ DIMMER = "dimmer"
 SWITCH = "switch"
 
 
-class MFiRestClient():
+class MFiRestClient(object):
     """
     TODO:
         sroutes.cgi , parse into json
