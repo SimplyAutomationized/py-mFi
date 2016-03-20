@@ -14,7 +14,11 @@ class UBNTWebSocketProtocol(WebSocketClientProtocol):
         print("connected!")
         self.sendMessage(json.dumps({"time": 10}))
         self.factory.client.sendMessage = self.sendMessage
-        self.factory.client.connected(None)
+        if self.factory.client.connected:
+            self.factory.client.connected(self)
+
+    def onMessage(self, payload, isBinary):
+        pass
 
 class UBNTWebSocketClient(object):
     def __init__(self, ip, port, username, password, loop=None):
@@ -53,11 +57,13 @@ class UBNTWebSocketClient(object):
                 print("connection failed")
                 yield asyncio.From(asyncio.sleep(5))
                 continue
+            except Exception as e:
+                print e
 
-    def connected(self):
+    def connected(self, sender):
         pass
 
-    def recv_data(self, payload, isBinary):
+    def recv_data(self, payload, isBinary=False):
         pass
 
     def send_cmd(self, data):
