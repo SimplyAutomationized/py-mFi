@@ -85,7 +85,6 @@ class MPower(UBNTWebSocketClient):
     def recv_data(self, payload, isBinary):
         try:
             if not isBinary:
-            	print("payload: {}".format(payload))
                 data = json.loads(payload)
                 if "sensors" in data and len(data['sensors']) > 0:
                     self.status = data['sensors'][0]
@@ -94,7 +93,6 @@ class MPower(UBNTWebSocketClient):
                             oldval = getattr(self, '_' + key)
                             setattr(self, '_' + key, self.status[key])
                             if oldval != self.status[key] and self.callback:
-                            	print ("device name is: {}".format(self.device_name))
                                 self.callback({self.device_name: {key: self.status[key], 'time': time.time() * 10}})
 
             else:
