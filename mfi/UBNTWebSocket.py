@@ -14,6 +14,8 @@ class UBNTWebSocketProtocol(WebSocketClientProtocol):
         print("connected!")
         self.sendMessage(json.dumps({"time": 10}))
         self.factory.client.sendMessage = self.sendMessage
+        self.onMessage = self.factory.client.recv_data
+        self.onClose = self.factory.client.clientConnectionFailed
         if self.factory.client.connected:
             self.factory.client.connected(self)
 
@@ -30,8 +32,6 @@ class UBNTWebSocketClient(object):
         self.callback = None
 
         self.__webSocket.protocol = UBNTWebSocketProtocol
-        self.__webSocket.protocol.onMessage = self.recv_data
-        self.__webSocket.protocol.onClose = self.clientConnectionFailed
         self.__webSocket.client = self
 
         if loop:
