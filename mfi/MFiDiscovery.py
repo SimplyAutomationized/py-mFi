@@ -57,10 +57,10 @@ class MFiUdpMsgParse:
         else:
             print("unsupported device type discovered: {}".format(self.device_type))
 
-    def __call__(self, address, port, user, pwd):
+    def __call__(self, port=7682, user="ubnt", pwd="ubnt"):
         if not self.device_class:
             return None
-        d = self.device_class(address, port, user, pwd)
+        d = self.device_class(self.address, port, user, pwd)
         d.device_name = self.device_name
         d.firmware_version = self.firmware_version
 

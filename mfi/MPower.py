@@ -14,7 +14,7 @@ import time
 class MPower(UBNTWebSocketClient):
     _lock = -1
 
-    def __init__(self, ip, port, username, password, device_name = "unknown"):
+    def __init__(self, ip, port=7682, username="ubnt", password="ubnt", device_name = "unknown"):
 
         #MFiRestClient.__init__(self, ip, username, password)
         UBNTWebSocketClient.__init__(self, ip, port, username, password)
