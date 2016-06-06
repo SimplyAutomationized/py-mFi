@@ -12,7 +12,7 @@ except ImportError:
 
 import time
 
-class Output:
+class Output(object):
     def __init__(self, index, parent):
         self.index = index
         self._on = False
@@ -73,7 +73,7 @@ class Output:
     @output.setter
     def output(self, value):
         self.parent.set_output(self.index, value)
-     
+
     def update(self, status):
 
         if "output" in status:
@@ -85,7 +85,7 @@ class Output:
             if hasattr(self, '_' + key) and key is not 'index':
                 oldval = getattr(self, '_' + key)
                 setattr(self, '_' + key, status[key])
-                            
+
 class MPower(UBNTWebSocketClient):
     _lock = -1
 
@@ -104,7 +104,6 @@ class MPower(UBNTWebSocketClient):
         self.send_cmd(data)
 
     def recv_data(self, payload, isBinary):
-        data = None
         try:
             if not isBinary:
                 data = json.loads(payload)
@@ -130,12 +129,12 @@ class MPower(UBNTWebSocketClient):
 
         except Exception as e:
             print("explody {}", e.message)
-            print("msg: {}".format(data))
+            print("msg: {}".format(payload))
             import sys, traceback
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
             traceback.print_exception(exc_type, exc_value, exc_traceback,
-                                      limit=2, file=sys.stdout)
+                                      limit=6, file=sys.stdout)
 
 if __name__ == '__main__':
     import argparse
@@ -148,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--on', help='toggle output', action="store_true")
     parser.add_argument('--off', help='toggle output off', action="store_true")
     parser.add_argument('--output', help='output index', type=int, default=1)
-    
+
 
     args = parser.parse_args()
 
