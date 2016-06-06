@@ -9,7 +9,6 @@ from MPower import MPower
 
 class MSwitch(MPower):
     _dimmer_level = 0
-    _output = 0
     _lock = 0
     status = {}
     callback=None
@@ -40,12 +39,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     mFI = MSwitch(args.address, args.port, args.username, args.pwd)
-
-    def dataReceived(data):
-        print(data)
-        # print("output is: {}, {} volts - {}".format(mFI.output,mFI.voltage,time.time()))
-
-
-    mFI.callback = dataReceived
 
     asyncio.get_event_loop().run_forever()

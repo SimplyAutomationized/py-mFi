@@ -2,6 +2,7 @@
 
 from MFiRestClient import MFiRestClient
 from UBNTWebSocket import UBNTWebSocketClient
+from pysignals import Signal
 
 import trollius as asyncio
 try:
@@ -11,15 +12,12 @@ except ImportError:
 
 import time
 
-class MPower(UBNTWebSocketClient):
-    _lock = -1
-
-    def __init__(self, ip, port=7682, username="ubnt", password="ubnt", device_name = "unknown"):
-
-        #MFiRestClient.__init__(self, ip, username, password)
-        UBNTWebSocketClient.__init__(self, ip, port, username, password)
-
-        self.device_name = device_name
+class Output:
+    def __init__(self, index, parent):
+        self.index = index
+        self._on = False
+        self.parent = parent
+    	self.output_changed = Signal(providing_args=["index", "value"])
 
         self._voltage = -1
         self._powerfactor = -1
@@ -74,31 +72,65 @@ class MPower(UBNTWebSocketClient):
 
     @output.setter
     def output(self, value):
-        self._output = value
-        data = {"sensors": [{"output": value, "port": 1}]}
-        self.send_cmd(data)
+        self.parent.set_output(self.index, value)
+     
+    def update(self, status):
+
+        if "output" in status:
+            o_v = status['output']
+            if o_v != self._output:
+                self.output_changed.send(sender=self, index=self.index, value=o_v)
+
+        for key in status.keys():
+            if hasattr(self, '_' + key) and key is not 'index':
+                oldval = getattr(self, '_' + key)
+                setattr(self, '_' + key, status[key])
+                            
+class MPower(UBNTWebSocketClient):
+    _lock = -1
+
+    def __init__(self, ip, port=7682, username="ubnt", password="ubnt", device_name = "unknown"):
+
+        #MFiRestClient.__init__(self, ip, username, password)
+        UBNTWebSocketClient.__init__(self, ip, port, username, password)
+
+        self.device_name = device_name
+        self.num_outputs_changed = Signal(providing_args=["num_outputs"])
+        self.outputs = []
+
 
     def set_output(self, port, value):
         data = {"sensors": [{"output": value, "port": port}]}
         self.send_cmd(data)
 
     def recv_data(self, payload, isBinary):
+        data = None
         try:
             if not isBinary:
                 data = json.loads(payload)
+
                 if "sensors" in data and len(data['sensors']) > 0:
-                    self.status = data['sensors'][0]
-                    for key in self.status.keys():
-                        if hasattr(self, '_' + key) and key is not 'index':
-                            oldval = getattr(self, '_' + key)
-                            setattr(self, '_' + key, self.status[key])
-                            if oldval != self.status[key] and self.callback:
-                                self.callback({self.device_name: {key: self.status[key], 'time': time.time() * 10}})
+                    status = data['sensors'][0]
+
+                    index = status['port']
+                    found = False
+
+                    for o in self.outputs:
+                        if o.index == index:
+                            found = True
+                            o.update(status)
+
+                    if not found:
+                        new_output = Output(index, self)
+                        self.outputs.append(new_output)
+                        self.num_outputs_changed.send(sender=self.__class__, num_outputs=len(self.outputs))
 
             else:
                 pass
+
         except Exception as e:
             print("explody {}", e.message)
+            print("msg: {}".format(data))
             import sys, traceback
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
@@ -122,12 +154,21 @@ if __name__ == '__main__':
 
     mFI = MPower(args.address, args.port, args.username, args.pwd)
 
-    def dataReceived(data):
-        print(data)
-        # print("output is: {}, {} volts - {}".format(mFI.output,mFI.voltage,time.time()))
+    outputs = []
 
 
-    mFI.callback = dataReceived
+    def output_changed(signal, sender, index, value):
+        print("output {} changed to {}".format(index, value))
+
+    def outputs_changed(signal, sender, num_outputs):
+        print("number of outputs: {}".format(num_outputs))
+
+        for o in mFI.outputs:
+            if not o in outputs:
+                outputs.append(o)
+                o.output_changed.connect(output_changed)
+
+    mFI.num_outputs_changed.connect(outputs_changed)
 
     def onConnected(client):
 	print ("on connected")
