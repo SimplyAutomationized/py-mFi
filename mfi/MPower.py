@@ -17,7 +17,7 @@ class Output(object):
         self.index = index
         self._on = False
         self.parent = parent
-    	self.output_changed = Signal(providing_args=["index", "value"])
+    	self.output_changed = Signal(providing_args=["value"])
 
         self._voltage = -1
         self._powerfactor = -1
@@ -76,15 +76,20 @@ class Output(object):
 
     def update(self, status):
 
-        if "output" in status:
-            o_v = status['output']
-            if o_v != self._output:
-                self.output_changed.send(sender=self, index=self.index, value=o_v)
+
+        def check_signal(key, value):
+            changed_sig = key + '_changed'
+
+            if hasattr(self, changed_sig):
+                signal = getattr(self, changed_sig)
+                signal.send(sender=self, value=value)
 
         for key in status.keys():
             if hasattr(self, '_' + key) and key is not 'index':
                 oldval = getattr(self, '_' + key)
-                setattr(self, '_' + key, status[key])
+                if status[key] != oldval:
+                    setattr(self, '_' + key, status[key])
+                    check_signal(key, status[key])
 
 class MPower(UBNTWebSocketClient):
     _lock = -1
@@ -97,6 +102,7 @@ class MPower(UBNTWebSocketClient):
         self.device_name = device_name
         self.num_outputs_changed = Signal(providing_args=["num_outputs"])
         self.outputs = []
+        self.OutputClass = Output
 
 
     def set_output(self, port, value):
@@ -104,37 +110,46 @@ class MPower(UBNTWebSocketClient):
         self.send_cmd(data)
 
     def recv_data(self, payload, isBinary):
-        try:
-            if not isBinary:
-                data = json.loads(payload)
 
-                if "sensors" in data and len(data['sensors']) > 0:
-                    status = data['sensors'][0]
+        payloads = payload.split("}{")
 
-                    index = status['port']
-                    found = False
+        for p in payloads:
+            if not p.endswith("}"):
+                p += "}"
+            if not p.startswith("{"):
+                p = "{" + p
 
-                    for o in self.outputs:
-                        if o.index == index:
-                            found = True
-                            o.update(status)
+            try:
+                if not isBinary:
+                    data = json.loads(p)
 
-                    if not found:
-                        new_output = Output(index, self)
-                        self.outputs.append(new_output)
-                        self.num_outputs_changed.send(sender=self.__class__, num_outputs=len(self.outputs))
+                    if "sensors" in data and len(data['sensors']) > 0:
+                        status = data['sensors'][0]
 
-            else:
-                pass
+                        index = status['port']
+                        found = False
 
-        except Exception as e:
-            print("explody {}", e.message)
-            print("msg: {}".format(payload))
-            import sys, traceback
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
-            traceback.print_exception(exc_type, exc_value, exc_traceback,
-                                      limit=6, file=sys.stdout)
+                        for o in self.outputs:
+                            if o.index == index:
+                                found = True
+                                o.update(status)
+
+                        if not found:
+                            new_output = self.OutputClass(index, self)
+                            self.outputs.append(new_output)
+                            self.num_outputs_changed.send(sender=self.__class__, num_outputs=len(self.outputs))
+
+                else:
+                    pass
+
+            except Exception as e:
+                print("explody {}", e.message)
+                print("msg: {}".format(p))
+                import sys, traceback
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+                traceback.print_exception(exc_type, exc_value, exc_traceback,
+                                          limit=6, file=sys.stdout)
 
 if __name__ == '__main__':
     import argparse
@@ -156,8 +171,8 @@ if __name__ == '__main__':
     outputs = []
 
 
-    def output_changed(signal, sender, index, value):
-        print("output {} changed to {}".format(index, value))
+    def output_changed(signal, sender, value):
+        print("output {} changed to {}".format(sender.index, value))
 
     def outputs_changed(signal, sender, num_outputs):
         print("number of outputs: {}".format(num_outputs))
