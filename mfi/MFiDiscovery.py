@@ -118,6 +118,13 @@ class MFiDiscovery:
     def discover(self):
         self.sock.sendto(self.discoveryPayload, ('<broadcast>', 10001))
 
+
+    def device(self, name, **kwargs):
+        for d in self.devices:
+            if d.device_name == name:
+                return d(**kwargs)
+
+
     @asyncio.coroutine
     def sendDiscovery(self):
         while True:
