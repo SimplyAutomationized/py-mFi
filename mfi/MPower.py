@@ -18,6 +18,7 @@ class Output(object):
         self._on = False
         self.parent = parent
     	self.output_changed = Signal(providing_args=["value"])
+        self.power_changed = Signal(providing_args=["value"])
 
         self._voltage = -1
         self._powerfactor = -1
@@ -45,26 +46,6 @@ class Output(object):
     @property
     def current(self):
             return self._current
-
-    @power.setter
-    def power(self, value):
-        self._power = value
-
-    @current.setter
-    def current(self, value):
-        self._current = value
-
-    @voltage.setter
-    def voltage(self, value):
-        self._voltage = value
-
-    @energy.setter
-    def energy(self, value):
-        self._energy = value
-
-    @powerfactor.setter
-    def powerfactor(self, value):
-        self._powerfactor = value
 
     @property
     def output(self):
@@ -120,27 +101,24 @@ class MPower(UBNTWebSocketClient):
                 p = "{" + p
 
             try:
-                if not isBinary:
-                    data = json.loads(p)
 
-                    if "sensors" in data and len(data['sensors']) > 0:
-                        status = data['sensors'][0]
+                data = json.loads(p)
 
-                        index = status['port']
-                        found = False
+                if "sensors" in data and len(data['sensors']) > 0:
+                    status = data['sensors'][0]
 
-                        for o in self.outputs:
-                            if o.index == index:
-                                found = True
-                                o.update(status)
+                    index = status['port']
+                    found = False
 
-                        if not found:
-                            new_output = self.OutputClass(index, self)
-                            self.outputs.append(new_output)
-                            self.num_outputs_changed.send(sender=self.__class__, num_outputs=len(self.outputs))
+                    for o in self.outputs:
+                        if o.index == index:
+                            found = True
+                            o.update(status)
 
-                else:
-                    pass
+                    if not found:
+                        new_output = self.OutputClass(index, self)
+                        self.outputs.append(new_output)
+                        self.num_outputs_changed.send(sender=self.__class__, num_outputs=len(self.outputs))
 
             except Exception as e:
                 print("explody {}", e.message)
