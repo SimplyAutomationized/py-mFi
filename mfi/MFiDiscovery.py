@@ -4,7 +4,7 @@ from MSwitch import MSwitch
 from MPower import MPower
 
 class M:
-    
+
     idsMap = {}
 
     @staticmethod
@@ -14,7 +14,7 @@ class M:
             return func
         return make_field
 
-class MFiUdpMsgParse: 
+class MFiUdpMsgParse:
     def __init__(self, address):
         self.device_class = None
         self.address = address
@@ -84,7 +84,7 @@ class MFiUdpMsgParse:
 
     @M.field(3)
     def parse_firmware_version(self, data):
-        self.firmware_version = self._to_string(data)        
+        self.firmware_version = self._to_string(data)
 
     def _to_string(self, data):
         s = ""
