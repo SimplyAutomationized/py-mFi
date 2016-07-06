@@ -18,7 +18,8 @@ class RestOutput():
         self._lock = None
         self._label = ''
         self._dimmer_mode = ''  
-
+        self._power = None
+        
     @property
     def output(self):
         return self._output
@@ -26,6 +27,10 @@ class RestOutput():
     @output.setter
     def output(self, value):
         self.parent.set(self.index, "output", value)
+
+    @property
+    def power(self):
+        return self._power
 
     @property
     def dimmer_mode(self):
@@ -103,12 +108,14 @@ class MFiRestClient(object):
     def get_routing_table(self):
         data = self.get('sroutes.cgi')
 
-    def get_sensor_data(self):
+    def get_sensor_data(self, debug=False):
         try:
             data = (self.session.get((self.url + "/mfi/sensors.cgi")))
             json_data = data.json()
             
             sensors = json_data['sensors']
+            if debug:
+                print("sensors = {}".format(sensors))
 
             for output in sensors:
                 _output = None
@@ -162,4 +169,5 @@ if __name__ == '__main__':
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     args = parser.parse_args()
 
-    mFI = MFiRestClient(args.address, args.username, args.pwd)
+    mFi = MFiRestClient(args.address, args.username, args.pwd)
+    mFi.get_sensor_data(debug=True)
