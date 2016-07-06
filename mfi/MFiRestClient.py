@@ -16,12 +16,15 @@ class MFiRestClient(object):
         self._label = ''
         self._dimmer_mode = ''
 
+        """Suppress urllib3"""
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
         """Temporarily set device_name to ip"""
         self._device_name = ip
         self._output = 0
         self._dimmer_level = 0
         self.ip = ip
-        self._lock
+        self._lock = None
         self.username = username
         self.password = password
         self.session = requests.Session()
@@ -40,6 +43,7 @@ class MFiRestClient(object):
         try:
             data = (self.session.get((self.url + "/mfi/sensors.cgi")))
             json_data = data.json()
+            print (json_data)
             for key in json_data['sensors'][0].keys():
                 setattr(self, '_' + key, json_data['sensors'][0][key])
         except:
