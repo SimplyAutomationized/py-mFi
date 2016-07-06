@@ -1,7 +1,76 @@
 import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 DIMMER = "dimmer"
 SWITCH = "switch"
+
+class RestOutput():
+
+    def __init__(self, index, parent):
+
+        self.index = index
+        self.parent = parent
+        self._device_name = None
+        self._output = 0
+        self._dimmer_level = 0
+        self._thismonth = 0
+        self._prevmonth = 0
+        self._lock = None
+        self._label = ''
+        self._dimmer_mode = ''  
+
+    @property
+    def output(self):
+        return self._output
+
+    @output.setter
+    def output(self, value):
+        self.parent.set(self.index, "output", value)
+
+    @property
+    def dimmer_mode(self):
+        return self._dimmer_mode
+
+    @property
+    def device_name(self):
+        return self._device_name
+
+    @device_name.setter
+    def label(self, value):
+        self.set('label', value)
+
+    @property
+    def lock(self):
+        self.get_sensor_data()
+        return self._lock
+
+    @lock.setter
+    def lock(self, value):
+        self.parent.set('lock', value)
+
+    @property
+    def thismonth(self):
+        return self._thismonth * 1/3200
+
+    @property
+    def prevmonth(self):
+        return self._prevmonth * 1/3200
+
+    @property
+    def site_survey(self):
+        return self.parent.get('survey.json.cgi')
+
+    @property
+    def signal(self):
+        return self.parent.get('signal.cgi')
+
+    @property
+    def port(self):
+        return self.index
+
+    def update(self, status):
+        for key in status.keys():
+            setattr(self, '_' + key, status[key])
 
 
 class MFiRestClient(object):
@@ -13,18 +82,13 @@ class MFiRestClient(object):
 
     """
     def __init__(self, ip, username, password):
-        self._label = ''
-        self._dimmer_mode = ''
+        self.outputs = []
 
         """Suppress urllib3"""
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
         """Temporarily set device_name to ip"""
-        self._device_name = ip
-        self._output = 0
-        self._dimmer_level = 0
-        self.ip = ip
-        self._lock = None
+       
         self.username = username
         self.password = password
         self.session = requests.Session()
@@ -43,73 +107,37 @@ class MFiRestClient(object):
         try:
             data = (self.session.get((self.url + "/mfi/sensors.cgi")))
             json_data = data.json()
-            print (json_data)
-            for key in json_data['sensors'][0].keys():
-                setattr(self, '_' + key, json_data['sensors'][0][key])
+            
+            sensors = json_data['sensors']
+
+            for output in sensors:
+                _output = None
+                
+                for o in self.outputs:
+                    if o.port == output["port"]:
+                        
+                        _output = o
+
+                if not _output:
+                    _output = RestOutput(output["port"], self)
+                    self.outputs.append(_output)
+
+                _output.update(output)
+
         except:
-            print("bad data returned: ", str(data))
-
-    @property
-    def output(self):
-        return self._output
-
-    @output.setter
-    def output(self, value):
-        self.set('output', value)
-        self.get_sensor_data()
-
-    @property
-    def dimmer_mode(self):
-        return self._dimmer_mode
-
-    @dimmer_mode.setter
-    def dimmer_mode(self, value):
-        if value is not 'switch' or value is not 'dimmer':
-            raise ValueError
-        self.set('dimmer_mode', value)
-
-    @property
-    def dimmer_level(self):
-        self.get_sensor_data()
-        return self._dimmer_level
-
-    @dimmer_level.setter
-    def dimmer_level(self, value):
-        self.set('dimmer_level', value)
-        self.get_sensor_data()
-
-    @property
-    def device_name(self):
-        return self._device_name
-
-    @device_name.setter
-    def label(self, value):
-        self.set('label', value)
-
-    @property
-    def lock(self):
-        self.get_sensor_data()
-        return self._lock
-
-    @lock.setter
-    def lock(self, value):
-        self.set('lock', value)
-
-    @property
-    def site_survey(self):
-        return self.get('survey.json.cgi')
-
-    @property
-    def signal(self):
-        return self.get('signal.cgi')
+            import sys, traceback
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+            traceback.print_exception(exc_type, exc_value, exc_traceback,
+                                      limit=6, file=sys.stdout)
 
     def get(self, cgi, isJSON=True):
         self.session.get('{}/{}'.format(self.url)).json()
 
-    def set(self, resource, value):
+    def set(self, sensor_id, key, value):
         data = {resource: value}
         response = self.session.post(
-            "{}/mfi/sensors.cgi?id={}&{}={}/".format(self.url, 1, resource, value))  # , data=data)
+            "{}/mfi/sensors.cgi?id={}&{}={}/".format(self.url, sensor_id, key, value))  # , data=data)
         return response
 
 
@@ -133,4 +161,5 @@ if __name__ == '__main__':
     parser.add_argument('username', help='username', default='ubnt', nargs="?")
     parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
     args = parser.parse_args()
+
     mFI = MFiRestClient(args.address, args.username, args.pwd)
