@@ -15,7 +15,7 @@ import time
 class Output(object):
     def __init__(self, index, parent):
         self.index = index
-        self._on = False
+        self._on = None
         self.parent = parent
         self.output_changed = Signal(providing_args=["value"])
         self.power_changed = Signal(providing_args=["value"])
