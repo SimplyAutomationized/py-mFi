@@ -6,64 +6,35 @@ except ImportError:
     import json
 
 import ssl
-from autobahn.asyncio.websocket import WebSocketClientProtocol, WebSocketClientFactory
+from wss import Client
 
 
-class UBNTWebSocketProtocol(WebSocketClientProtocol):
-    def onOpen(self):
-        print("connected!")
-        self.sendMessage(json.dumps({"time": 10}))
-        self.factory.client.sendMessage = self.sendMessage
-        self.onMessage = self.factory.client.recv_data
-        self.onClose = self.factory.client.clientConnectionFailed
-        if self.factory.client.connected:
-            self.factory.client.connected(self)
+class UBNTWebSocketClient(Client):
+    def __init__(self, ip, port, username, password, loop=asyncio.get_event_loop()):
+        Client.__init__(self, retry=True, loop=loop)
 
-    def onMessage(self, payload, isBinary):
-        pass
-
-class UBNTWebSocketClient(object):
-    def __init__(self, ip, port, username, password, loop=None):
-
-        self.__webSocket = WebSocketClientFactory(url="wss://{}:{}/?username={}&password={}".
+        self.setTextHandler(self.recv_data)
+        self.connectTo(ip, port=port, useSsl=True, url="wss://{}:{}/?username={}&password={}".
                                                   format(ip, port, username, password), protocols=['mfi-protocol'])
         self.ip = ip
         self.port = port
-        self.callback = None
 
-        self.__webSocket.protocol = UBNTWebSocketProtocol
-        self.__webSocket.client = self
+    def registerClient(self, hndl):
+        print("connected!")
 
-        if loop:
-            self.loop = loop
-        else:
-            self.loop = asyncio.get_event_loop()
+        Client.registerClient(self, hndl)
 
-        self.loop.run_until_complete(self._connect())
+        #self.connected()
 
-    @asyncio.coroutine
-    def _connect(self):
-        while True:
-            try:
-                yield asyncio.From(self.loop.create_connection(self.__webSocket, self.ip, self.port,
-                                                               ssl=ssl.SSLContext(ssl.PROTOCOL_SSLv23)))
-                return
-            except asyncio.py33_exceptions.ConnectionRefusedError:
-                print("connection refused")
-                yield asyncio.From(asyncio.sleep(5))
-                continue
+        #self.sendMessage(json.dumps({"time": 10}))
 
-            except OSError:
-                print("connection failed")
-                yield asyncio.From(asyncio.sleep(5))
-                continue
-            except Exception as e:
-                print e
+    def onMessage(self, payload):
+        pass
 
     def connected(self, sender):
         pass
 
-    def recv_data(self, payload, isBinary=False):
+    def recv_data(self, payload):
         pass
 
     def send_cmd(self, data):
@@ -71,10 +42,4 @@ class UBNTWebSocketClient(object):
         self.sendMessage(json.dumps(data))
 
     def sendMessage(self, data):
-        print("Not connected...")
-        pass
-
-    def clientConnectionFailed(self, wasClean, code, reason):
-        print("Client connection ({}) failed (reason={}.. retrying ..".format(self.ip, reason))
-        yield asyncio.From(asyncio.sleep(5))
-        self.loop.create_task(self._connect())
+        self.sendTextMsg(data) 

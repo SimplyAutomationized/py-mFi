@@ -17,7 +17,7 @@ class Output(object):
         self.index = index
         self._on = False
         self.parent = parent
-    	self.output_changed = Signal(providing_args=["value"])
+        self.output_changed = Signal(providing_args=["value"])
         self.power_changed = Signal(providing_args=["value"])
 
         self._voltage = -1
@@ -90,7 +90,7 @@ class MPower(UBNTWebSocketClient):
         data = {"sensors": [{"output": value, "port": port}]}
         self.send_cmd(data)
 
-    def recv_data(self, payload, isBinary):
+    def recv_data(self, payload):
 
         payloads = payload.split("}{")
 
@@ -163,7 +163,6 @@ if __name__ == '__main__':
     mFI.num_outputs_changed.connect(outputs_changed)
 
     def onConnected(client):
-	print ("on connected")
         try:
             if args.on:
                 mFI.set_output(args.output, True)
