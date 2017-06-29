@@ -39,7 +39,4 @@ class UBNTWebSocketClient(Client):
 
     def send_cmd(self, data):
         print('sending {}'.format(data))
-        self.sendMessage(json.dumps(data))
-
-    def sendMessage(self, data):
-        self.sendTextMsg(data) 
+        self.sendTextMsg(json.dumps(data))
