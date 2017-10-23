@@ -5,9 +5,7 @@ try:
 except ImportError:
     import json
 
-import ssl
 from wss import Client
-
 
 class UBNTWebSocketClient(Client):
     def __init__(self, ip, port, username, password, loop=asyncio.get_event_loop()):

@@ -7,7 +7,8 @@ setup(name='mfi',
       description='Python library for interacting with various ubiquity mfi devices',
       author='Kevron Rees, Nathan Rees',
       author_email='tripzero.kev@gmail.com, nextabyte@gmail.com',
-      url='https://github.com/SimplyAutomationized/py-mFi-LD',
+      url='https://github.com/SimplyAutomationized/py-mFi',
       packages=["mfi"],
-      install_requires=["trollius", "twisted"]
+      scripts=['mfi/mpower'], 
+      install_requires=["trollius", "twisted",  "wss",  "pysignals"]
       )

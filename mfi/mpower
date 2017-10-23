@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+
+from mfi import MPower
+import trollius as asyncio
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('address', help="address", default="localhost", nargs="?")
+    parser.add_argument('port', help="port", default=7682, nargs="?")
+    parser.add_argument('username', help='username', default='ubnt', nargs="?")
+    parser.add_argument('pwd', help='password', default='ubnt', nargs="?")
+    parser.add_argument('--on', help='toggle output', action="store_true")
+    parser.add_argument('--off', help='toggle output off', action="store_true")
+    parser.add_argument('--output', help='output index', type=int, default=1)
+    parser.add_argument('--num_outputs', help='number of outlets', type=int, default=8)
+
+
+    args = parser.parse_args()
+
+    mFI = MPower(args.address, args.port, args.username, args.pwd)
+
+    outputs = []
+
+    def output_changed(signal, sender, value):
+        print("output {} changed to {}".format(sender.index, value))
+
+    def outputs_changed(signal, sender, num_outputs):
+        print("number of outputs: {}".format(num_outputs))
+
+        for o in mFI.outputs:
+            if not o in outputs:
+                outputs.append(o)
+                o.output_changed.connect(output_changed)
+
+    mFI.num_outputs_changed.connect(outputs_changed)
+
+    asyncio.coroutine
+    def do_command():
+        
+        while len(outputs) < args.num_outputs:
+             yield asyncio.From(asyncio.sleep(1.0))
+      
+        output = mFI.output(args.output)
+       
+        if not output:
+            print ("output {} does not exist".format(args.output))
+            return
+        
+        while not output.ready:
+            yield asyncio.From(asyncio.sleep(1.0))
+
+        if args.on:
+            output.output = True
+            while not output.output:
+                yield asyncio.From(asyncio.sleep(0.5))
+
+        elif args.off:
+            output.output = False
+            while output.output == True:
+                yield asyncio.From(asyncio.sleep(0.5))
+                
+        else:
+            while True:
+                yield asyncio.From(asyncio.sleep(0.5))
+    
+        
+
+    asyncio.get_event_loop().run_until_complete(do_command())

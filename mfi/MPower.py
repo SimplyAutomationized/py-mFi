@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from MFiRestClient import MFiRestClient
-from UBNTWebSocket import UBNTWebSocketClient
+from .UBNTWebSocket import UBNTWebSocketClient
 from pysignals import Signal
 
 import trollius as asyncio
@@ -10,12 +9,11 @@ try:
 except ImportError:
     import json
 
-import time
 
 class Output(object):
     def __init__(self, index, parent):
         self.index = index
-        self._on = None
+        self._output = None
         self.parent = parent
         self.output_changed = Signal(providing_args=["value"])
         self.power_changed = Signal(providing_args=["value"])
@@ -25,7 +23,13 @@ class Output(object):
         self._energy = -1
         self._current = -1
         self._power = -1
-        self._output = -1
+        
+        #need a _ready property to indicate that the output exists and has a known state
+        self._ready = False
+
+    @property
+    def ready(self):
+        return self._ready
 
     @property
     def power(self):
@@ -56,8 +60,6 @@ class Output(object):
         self.parent.set_output(self.index, value)
 
     def update(self, status):
-
-
         def check_signal(key, value):
             changed_sig = key + '_changed'
 
@@ -66,6 +68,8 @@ class Output(object):
                 signal.send(sender=self, value=value)
 
         for key in status.keys():
+            if "output" in status.keys():
+                self._ready = True
             if hasattr(self, '_' + key) and key is not 'index':
                 oldval = getattr(self, '_' + key)
                 if status[key] != oldval:
@@ -85,6 +89,10 @@ class MPower(UBNTWebSocketClient):
         self.outputs = []
         self.OutputClass = Output
 
+    def output(self, port):
+        for out in self.outputs:
+            if out.index == port:
+                return out
 
     def set_output(self, port, value):
         data = {"sensors": [{"output": value, "port": port}]}
@@ -101,7 +109,6 @@ class MPower(UBNTWebSocketClient):
                 p = "{" + p
 
             try:
-
                 data = json.loads(p)
 
                 if "sensors" in data and len(data['sensors']) > 0:
@@ -140,6 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--on', help='toggle output', action="store_true")
     parser.add_argument('--off', help='toggle output off', action="store_true")
     parser.add_argument('--output', help='output index', type=int, default=1)
+    parser.add_argument('--num_outputs', help='number of outlets', type=int, default=8)
 
 
     args = parser.parse_args()
@@ -147,7 +155,6 @@ if __name__ == '__main__':
     mFI = MPower(args.address, args.port, args.username, args.pwd)
 
     outputs = []
-
 
     def output_changed(signal, sender, value):
         print("output {} changed to {}".format(sender.index, value))
@@ -162,16 +169,35 @@ if __name__ == '__main__':
 
     mFI.num_outputs_changed.connect(outputs_changed)
 
-    def onConnected(client):
-        try:
-            if args.on:
-                mFI.set_output(args.output, True)
+    asyncio.coroutine
+    def do_command():
+        
+        while len(outputs) < args.num_outputs:
+             yield asyncio.From(asyncio.sleep(1.0))
+      
+        output = mFI.output(args.output)
+       
+        if not output:
+            print ("output {} does not exist".format(args.output))
+            return
+        
+        while not output.ready:
+            yield asyncio.From(asyncio.sleep(1.0))
 
-            elif args.off:
-                mFI.set_output(args.output, False)
-        except:
-            print("caught exception in onConnected")
+        if args.on:
+            output.output = True
+            while not output.output:
+                yield asyncio.From(asyncio.sleep(0.5))
 
-    mFI.connected = onConnected
+        elif args.off:
+            output.output = False
+            while output.output == True:
+                yield asyncio.From(asyncio.sleep(0.5))
+                
+        else:
+            while True:
+                yield asyncio.From(asyncio.sleep(0.5))
+    
+        
 
-    asyncio.get_event_loop().run_forever()
+    asyncio.get_event_loop().run_until_complete(do_command())
