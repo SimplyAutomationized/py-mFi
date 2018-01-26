@@ -17,19 +17,10 @@ class UBNTWebSocketClient(Client):
         self.ip = ip
         self.port = port
 
-    def registerClient(self, hndl):
-        print("connected!")
-
-        Client.registerClient(self, hndl)
-
-        #self.connected()
-
-        #self.sendMessage(json.dumps({"time": 10}))
-
     def onMessage(self, payload):
         pass
 
-    def connected(self, sender):
+    def connected(self):
         pass
 
     def recv_data(self, payload):
