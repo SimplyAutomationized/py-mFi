@@ -36,13 +36,23 @@ if __name__ == '__main__':
 
     mFI.num_outputs_changed.connect(outputs_changed)
 
-    asyncio.coroutine
+    @asyncio.coroutine
     def do_command():
         
-        while len(outputs) < args.num_outputs:
-             yield asyncio.From(asyncio.sleep(1.0))
-      
-        output = mFI.output(args.output)
+        output = None
+
+        # hand out until connected
+        while len(outputs) < 1:
+            yield asyncio.From(asyncio.sleep(0.1))
+
+        if args.on:
+            mFI.set_output(args.output, True)
+        elif args.off:
+            mFI.set_output(args.output, False)
+
+        while len(outputs) < args.num_outputs and not output:
+            output = mFI.output(args.output)
+            yield asyncio.From(asyncio.sleep(1.0))      
        
         if not output:
             print ("output {} does not exist".format(args.output))
@@ -52,19 +62,16 @@ if __name__ == '__main__':
             yield asyncio.From(asyncio.sleep(1.0))
 
         if args.on:
-            output.output = True
             while not output.output:
                 yield asyncio.From(asyncio.sleep(0.5))
 
         elif args.off:
-            output.output = False
             while output.output == True:
                 yield asyncio.From(asyncio.sleep(0.5))
                 
         else:
             while True:
                 yield asyncio.From(asyncio.sleep(0.5))
-    
-        
+
 
     asyncio.get_event_loop().run_until_complete(do_command())
