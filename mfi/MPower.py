@@ -3,7 +3,7 @@
 from .UBNTWebSocket import UBNTWebSocketClient
 from pysignals import Signal
 
-import trollius as asyncio
+
 try:
     import ujson as json
 except ImportError:
@@ -128,8 +128,10 @@ class MPower(UBNTWebSocketClient):
                         self.num_outputs_changed.send(sender=self.__class__, num_outputs=len(self.outputs))
 
             except Exception as e:
-                print("explody {}", e.message)
+                print("device address: {}".format(self.ip))
+                print("explody {}".format(e.message))
                 print("msg: {}".format(p))
+
                 import sys, traceback
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
@@ -138,6 +140,11 @@ class MPower(UBNTWebSocketClient):
 
 if __name__ == '__main__':
     import argparse
+
+    if sys.version_info >= (3,0):
+        import asyncio
+    else:
+        import trollius as asyncio
 
     parser = argparse.ArgumentParser()
     parser.add_argument('address', help="address", default="localhost", nargs="?")

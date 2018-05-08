@@ -1,9 +1,14 @@
-import trollius as asyncio
+import sys, traceback
 
 try:
     import ujson as json
 except ImportError:
     import json
+
+if sys.version_info >= (3,0):
+    import asyncio
+else:
+    import trollius as asyncio
 
 from wss import Client
 
@@ -27,5 +32,9 @@ class UBNTWebSocketClient(Client):
         pass
 
     def send_cmd(self, data):
-        print('sending {}'.format(data))
+        print('sending {} to {}'.format(data, self.ip))
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_tb(exc_traceback, limit=5, file=sys.stdout)
+        traceback.print_exception(exc_type, exc_value, exc_traceback, limit=6, file=sys.stdout)
+
         self.sendTextMsg(json.dumps(data))

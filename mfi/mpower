@@ -16,7 +16,6 @@ if __name__ == '__main__':
     parser.add_argument('--output', help='output index', type=int, default=1)
     parser.add_argument('--num_outputs', help='number of outlets', type=int, default=8)
 
-
     args = parser.parse_args()
 
     mFI = MPower(args.address, args.port, args.username, args.pwd)
@@ -49,41 +48,30 @@ if __name__ == '__main__':
 
         output = None
 
-        while len(outputs) < args.num_outputs and not output:
-            output = mFI.output(args.output)
-            yield asyncio.From(asyncio.sleep(1.0))
-
-        # hand out until connected
-        while len(outputs) < 1:
+        while not mFI.output(args.output):
             yield asyncio.From(asyncio.sleep(0.1))
+        
+        output = mFI.output(args.output)      
 
         if args.on:
             mFI.set_output(args.output, True)
         elif args.off:
             mFI.set_output(args.output, False)
 
-        while len(outputs) < args.num_outputs and not output:
-            output = mFI.output(args.output)
-            yield asyncio.From(asyncio.sleep(1.0))      
-
-        if not output:
-            print ("output {} does not exist".format(args.output))
-            return
-
         while not output.ready:
-            yield asyncio.From(asyncio.sleep(1.0))
+            yield asyncio.From(asyncio.sleep(0.1))
 
         if args.on:
             while not output.output:
-                yield asyncio.From(asyncio.sleep(0.5))
+                yield asyncio.From(asyncio.sleep(0.1))
 
         elif args.off:
             while output.output == True:
-                yield asyncio.From(asyncio.sleep(0.5))
+                yield asyncio.From(asyncio.sleep(0.1))
                 
         else:
             while True:
-                yield asyncio.From(asyncio.sleep(0.5))
+                yield asyncio.From(asyncio.sleep(0.1))
 
 
     asyncio.get_event_loop().run_until_complete(do_command())
