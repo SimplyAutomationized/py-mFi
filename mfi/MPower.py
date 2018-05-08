@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from .UBNTWebSocket import UBNTWebSocketClient
-from PySignal import ClassSignal
+from PySignal import Signal
 
 try:
     import ujson as json
@@ -14,15 +14,15 @@ class Output(object):
         self.index = index
         self._output = None
         self.parent = parent
-        self.output_changed = ClassSignal()
-        self.power_changed = ClassSignal()
+        self.output_changed = Signal()
+        self.power_changed = Signal()
 
         self._voltage = -1
         self._powerfactor = -1
         self._energy = -1
         self._current = -1
         self._power = -1
-        
+
         #need a _ready property to indicate that the output exists and has a known state
         self._ready = False
 
@@ -36,12 +36,12 @@ class Output(object):
     def power(self):
             return self._power
 
- 
+
     @property
     def voltage(self):
             return self._voltage
 
- 
+
     @property
     def powerfactor(self):
             return self._powerfactor
@@ -61,7 +61,7 @@ class Output(object):
     def output(self):
         return self._output
 
- 
+
     @output.setter
     def output(self, value):
         self.parent.set_output(self.index, value)
@@ -88,14 +88,14 @@ class Output(object):
 class MPower(UBNTWebSocketClient):
     _lock = -1
 
-    
+
     def __init__(self, ip, port=7682, username="ubnt", password="ubnt", device_name = "unknown"):
 
         #MFiRestClient.__init__(self, ip, username, password)
         UBNTWebSocketClient.__init__(self, ip, port, username, password)
 
         self.device_name = device_name
-        self.num_outputs_changed = ClassSignal()
+        self.num_outputs_changed = Signal()
         self.outputs = []
         self.OutputClass = Output
 
@@ -112,6 +112,9 @@ class MPower(UBNTWebSocketClient):
 
 
     def recv_data(self, payload):
+
+        if isinstance(payload, bytes):
+            payload = payload.decode('utf-8')
 
         payloads = payload.split("}{")
 
@@ -138,11 +141,11 @@ class MPower(UBNTWebSocketClient):
                     if not found:
                         new_output = self.OutputClass(index, self)
                         self.outputs.append(new_output)
-                        self.num_outputs_changed.emit(self.outputs)
+                        self.num_outputs_changed.emit(len(self.outputs))
 
             except Exception as e:
                 print("device address: {}".format(self.ip))
-                print("explody {}".format(e.message))
+                print("explody {}".format(e))
                 print("msg: {}".format(p))
 
                 import sys, traceback

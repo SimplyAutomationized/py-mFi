@@ -6,7 +6,7 @@ except ImportError:
 
 from mfi import MPower, Output
 
-from PySignal import ClassSignal
+from PySignal import Signal
 
 
 class DimmerOutput(Output):
@@ -16,7 +16,7 @@ class DimmerOutput(Output):
         self._dimmer_level = 0
         self._lock = 0
 
-        self.dimmer_level_changed = ClassSignal()
+        self.dimmer_level_changed = Signal()
 
 
     @property
