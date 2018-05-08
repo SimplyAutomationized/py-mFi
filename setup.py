@@ -10,5 +10,5 @@ setup(name='mfi',
       url='https://github.com/SimplyAutomationized/py-mFi',
       packages=["mfi"],
       scripts=['mfi/mpower'], 
-      install_requires=["trollius", "twisted",  "wss",  "pysignals"]
+      install_requires=["trollius", "twisted",  "wss",  "PySignal"]
       )

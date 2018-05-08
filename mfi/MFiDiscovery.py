@@ -1,7 +1,8 @@
+import binascii
 from socket import *
-import trollius as asyncio
-from MSwitch import MSwitch
-from MPower import MPower
+
+from mfi import MSwitch
+from mfi import MPower
 
 class M:
 
@@ -14,10 +15,12 @@ class M:
             return func
         return make_field
 
+
 class MFiUdpMsgParse:
     def __init__(self, address):
         self.device_class = None
         self.address = address
+
 
     def parse_device(self, msg):
 
@@ -57,6 +60,7 @@ class MFiUdpMsgParse:
         else:
             print("unsupported device type discovered: {}".format(self.device_type))
 
+
     def __call__(self, port=7682, user="ubnt", pwd="ubnt"):
         if not self.device_class:
             return None
@@ -66,25 +70,31 @@ class MFiUdpMsgParse:
 
         return d
 
+
     def parse_field(self, instance, id, field):
         if id in M.idsMap:
             M.idsMap[id](instance, field)
+
 
     @M.field(11)
     def parse_device_name(self, data):
         self.device_name = self._to_string(data)
 
+
     @M.field(12)
     def parse_device_type(self, data):
         self.device_type = self._to_string(data)
+
 
     @M.field(13)
     def parse_ssid(self, data):
         self.ssid = self._to_string(data)
 
+
     @M.field(3)
     def parse_firmware_version(self, data):
         self.firmware_version = self._to_string(data)
+
 
     def _to_string(self, data):
         s = ""
@@ -95,7 +105,7 @@ class MFiUdpMsgParse:
 
 class MFiDiscovery:
 
-    def __init__(self, loop=None):
+    def __init__(self):
         self.devices = []
 
         self.discoveryPayload = bytearray()
@@ -108,12 +118,6 @@ class MFiDiscovery:
         self.sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
         self.sock.setblocking(0)
 
-        self.loop = loop
-        if not self.loop:
-            self.loop = asyncio.get_event_loop()
-
-        self.loop.create_task(self.sendDiscovery())
-        self.loop.create_task(self.readData())
 
     def discover(self):
         self.sock.sendto(self.discoveryPayload, ('<broadcast>', 10001))
@@ -125,35 +129,14 @@ class MFiDiscovery:
                 return d(**kwargs)
 
 
-    @asyncio.coroutine
-    def sendDiscovery(self):
-        while True:
-            self.discover()
-            #sleep for 10 mins:
-            yield asyncio.From(asyncio.sleep(600))
+    def poll(self):
+        """poll() should be called periodically"""
+        data, addrport = self.sock.recvfrom(1024)
+        address, port = addrport
+        self.parseData(data, address)
 
-    @asyncio.coroutine
-    def readData(self):
-        while True:
-            try:
-                data, addrport = self.sock.recvfrom(1024)
-                address, port = addrport
-                self.parseData(data, address)
-                
-            #except BlockingIOError:
-            #    yield asyncio.From(asyncio.sleep(3))
-
-            except:
-                """import sys, traceback
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
-                traceback.print_exception(exc_type, exc_value, exc_traceback,
-                        limit=2, file=sys.stdout)
-                """
-                yield asyncio.From(asyncio.sleep(3))
 
     def parseData(self, data, address):
-        import binascii
 
         def split(str, num):
             return [ str[start:start+num] for start in range(0, len(str), num) ]
@@ -172,6 +155,7 @@ class MFiDiscovery:
 
         if not has:
             self.devices.append(device)
+
 
 def testDiscoverMFI():
     sock = socket(AF_INET, SOCK_DGRAM)
@@ -196,13 +180,19 @@ def testDiscoverMFI():
         print(response)
     # Parse response        
 
+
 if __name__ == '__main__':
+    if sys.version_info >= (3,0):
+        import asyncio
+    else:
+        import trollius as asyncio
 
     loop = asyncio.get_event_loop()
 
     print("discovering...")
     discovery = MFiDiscovery()
     discovery.discover()
+    discovery.poll()
 
     loop.run_until_complete(asyncio.sleep(10))
 

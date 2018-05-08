@@ -22,10 +22,10 @@ if __name__ == '__main__':
 
     outputs = []
 
-    def output_changed(signal, sender, value):
+    def output_changed(value):
         print("output {} changed to {}".format(sender.index, value))
 
-    def outputs_changed(signal, sender, num_outputs):
+    def outputs_changed(num_outputs):
         print("number of outputs: {}".format(num_outputs))
 
         for o in mFI.outputs:

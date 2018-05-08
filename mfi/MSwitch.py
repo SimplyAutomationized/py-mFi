@@ -3,24 +3,26 @@ try:
     import ujson as json
 except ImportError:
     import json
-from MPower import MPower, Output
 
-from pysignals import Signal
+from mfi import MPower, Output
+
+from PySignal import ClassSignal
 
 
 class DimmerOutput(Output):
 
     def __init__(self, index, parent):
         Output.__init__(self, index, parent)
-        _dimmer_level = 0
-        _lock = 0
+        self._dimmer_level = 0
+        self._lock = 0
 
-        self.dimmer_level_changed = Signal(providing_args=["value"])
+        self.dimmer_level_changed = ClassSignal()
 
 
     @property
     def dimmer_level(self):
         return self.dimmer_level
+
 
     @dimmer_level.setter
     def dimmer_level(self, value):
@@ -34,26 +36,32 @@ class MSwitch(MPower):
         MPower.__init__(self, ip, port, username, password)
         self.OutputClass = DimmerOutput
 
+
     @property
     def dimmer_level(self):
         if not len(self.outputs):
             print("no outputs on device.  not connected?")
-            return None
+            return
 
         return self.outputs[0].dimmer_level
+
 
     @dimmer_level.setter
     def dimmer_level(self, value):
         if not len(self.outputs):
             print("no outputs on device.  not connected?")
-            return None
+            return
 
         self.outputs[0].dimmer_level = value
 
 
 if __name__ == '__main__':
     import argparse
-    import trollius as asyncio
+    
+    if sys.version_info >= (3,0):
+        import asyncio
+    else:
+        import trollius as asyncio
 
     parser = argparse.ArgumentParser()
     parser.add_argument('address', help="address", default="localhost", nargs="?")
