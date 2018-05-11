@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from mfi import MPower
-import trollius as asyncio
+import asyncio
 
 if __name__ == '__main__':
     import argparse
@@ -49,9 +49,9 @@ if __name__ == '__main__':
         output = None
 
         while not mFI.output(args.output):
-            yield asyncio.From(asyncio.sleep(0.1))
-        
-        output = mFI.output(args.output)      
+            yield from asyncio.sleep(0.1)
+
+        output = mFI.output(args.output)
 
         if args.on:
             mFI.set_output(args.output, True)
@@ -59,19 +59,18 @@ if __name__ == '__main__':
             mFI.set_output(args.output, False)
 
         while not output.ready:
-            yield asyncio.From(asyncio.sleep(0.1))
+            yield from asyncio.sleep(0.1)
 
         if args.on:
             while not output.output:
-                yield asyncio.From(asyncio.sleep(0.1))
+                yield from asyncio.sleep(0.1)
 
         elif args.off:
             while output.output == True:
-                yield asyncio.From(asyncio.sleep(0.1))
-                
+                yield from asyncio.sleep(0.1)
         else:
             while True:
-                yield asyncio.From(asyncio.sleep(0.1))
+                yield from asyncio.sleep(0.1)
 
 
     asyncio.get_event_loop().run_until_complete(do_command())
