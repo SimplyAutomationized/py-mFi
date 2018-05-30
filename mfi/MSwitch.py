@@ -32,7 +32,7 @@ class DimmerOutput(Output):
 
 class MSwitch(MPower):
 
-    def __init__(self, ip, port, username, password):
+    def __init__(self, ip, port=7682, username="ubnt", password="ubnt"):
         MPower.__init__(self, ip, port, username, password)
         self.OutputClass = DimmerOutput
 
